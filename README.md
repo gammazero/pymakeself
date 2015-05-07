@@ -1,4 +1,8 @@
-# PyMakeSelf - Make self-extracting archives with Python
+# pymakeself
+
+Make self-extracting archives with Python, on most operating systems.
+
+## Overview
 
 pymakeself is a Python script that generates a self-extractable tar.gz archive from a directory.  The resulting file appears as a Python script, and can be launched as is.  The archive will then uncompress itself to a temporary directory and an optional arbitrary command will be executed (for example an installation script).  pymakeself archives also include a MD5 checksum for integrity self-validation.
 
@@ -19,24 +23,28 @@ Testing with these whould be done soon:
 ## Usage
 
 The syntax of makeself.py is the following:
-makeself.py [args] archive_dir file_name label startup_script [script_args]
+makeself.py [args] archive_dir file_name startup_script [script_args]
 
 args are optional options for Makeself.  The available ones are:
 `--version` : Prints the version number on stdout, then exits immediately
+
+`--help, -h` : Print out this help message.
+
+`--quiet, -q` : Do not print any messages other than errors.
+
+`--tools, -t`  : Include installtools module.
 
 `--gzip` : Use gzip for compression (is the default on platforms on which gzip is commonly available, like Linux)
 
 `--bzip2` : Use bzip2 instead of gzip for better compression. The bzip2 command must be available in the command path. I recommend that you set the prefix to something like '.bz2.run' for the archive, so that potential users know that they'll need bzip2 to extract it.
 
-`--nocomp` : Do not use any compression for the archive, which will then be an uncompressed TAR.
+`--xz` : Compress using xz instead of gzip.  This requires Python3.x for both creation and extraction.
 
-`--notemp` : The generated archive will not extract the files to a temporary directory, but in a new directory created in the current directory. This is better to distribute software packages that may extract and compile by themselves (i.e. launch the compilation through the embedded script).
+`--current` : Extract to current directory, instead of to a temporary.
 
-`--current` : Files will be extracted to the current directory, instead of in a subdirectory. This option implies `--notemp` above.
+`--target dir` : Extract directly to a target directory, instead of to a temporary directory (temporary is default).
 
 `--follow` : Follow the symbolic links inside of the archive directory, i.e. store the files that are being pointed to instead of the links themselves.
-
-`--copy` : Upon extraction, the archive will first extract itself to a temporary directory. The main application of this is to allow self-contained installers stored in a Makeself archive on a CD, when the installer program will later need to unmount the CD and allow a new one to be inserted. This prevents "Filesystem busy" errors for installers that span multiple CDs.
 
 `--nomd5` : Disable the creation of a MD5 checksum for the archive.  This speeds up the extraction process if integrity checking is not necessary.
 
@@ -44,9 +52,7 @@ archive_dir is the name of the directory that contains the files to be archived
 
 file_name is the name of the archive to be created
 
-label is an arbitrary text string describing the package.  It will be displayed while extracting the files.
-
-startup_script is the command to be executed from within the directory of extracted files.  Thus, if you wish to execute a program contain in this directory, you must prefix your command with "./". For example, ./program will be fine.  The script_args are additionnal arguments for this command.
+startup_script is the command to be executed, from within the archive directory, when the archive is extracted.  If the startup script is located in the archive directory, then prefix it with "./" as a shortcut for specifying its path.  When the archive is extracted, all of the contained files are put in subdirectory called "install_files".  If the startup_script needs to refer to the archive directory, then it will first need to cd to the parent directory and then work with the "install_files" subdirectory.  The script_args are additionnal arguments for this command.
 
 Here is an example, assuming the user has a package image stored in a /home/joe/mysoft, and he wants to generate a self-extracting package named install_mysoft.py, which will launch the "setup" script initially stored in /home/joe/mysoft :
 makeself.py /home/joe/mysoft mysoft "Joe's Nice Software Package" ./setup
@@ -54,27 +60,13 @@ makeself.py /home/joe/mysoft mysoft "Joe's Nice Software Package" ./setup
 Here is also how I created the install_pymakeself.py archive which contains the Makeself distribution :
 ```python makeself.py --notemp PyMakeSelf pymakeself "PyMakeSelf by Andrew Gillis" python ./setup.py```
 
-Archives generated with PyMakeSelf 1.0 can be passed the following arguments:
+Archives generated with pymakeself can be passed the following arguments:
 
-`--keep` : Prevent the files to be extracted in a temporary directory that will be removed after the embedded script's execution.  The files will then be extracted in the current working directory and will stay here until you remove them.
+`--check` : Check the archive's MD5 sum and exit.
 
-`--verbose` : Will prompt the user before executing the embedded command.
+`--extract` : Extract package contents to temproary directory and exit.
 
-`--target dir` : Allows to extract the archive in an arbitrary place.
-
-`--confirm` : Prompt the user for confirmation before running the embedded command.
-
-`--info` : Print out general information about the archive (does not extract).
-
-`--lsm` : Print out the LSM entry, if it is present.
-
-`--list` : List the files in the archive.
-
-`--check` : Check the archive for integrity using the embedded checksums.  Does not extract the archive.
-
-`--noexec` : Do not run the embedded script after extraction.
-
-Any subsequent arguments to the archive will be passed as additional arguments to the embedded command.  You should explicitly use the -- special command-line construct before any such options to make sure that PyMakeSelf will not try to interpret them.
+Any subsequent arguments to the archive will be passed as additional arguments to the embedded command.
 
 ## Examples
 
