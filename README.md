@@ -85,11 +85,11 @@ Create an installer, named install_stuff, that runs setup.py:
 Create an installer that runs the accountutil.py tool (one of the modules in the pymakeself installtools) as the setup script, to create the "ajg" user account:
 
   python -m pymakeself ~/ajg_dot_files create_ajg accountutil \
-  -c 'Andrew J. Gillis' -i install_files ajg
+  -c 'Andrew J. Gillis' -i ./ ajg
 
 Specifying "accountutil" as the install script tells pymakeself to use the UNIX account creation tool, that is included with the pymakeself package.
 
-Notice that the -i argument to accountutil.py specifies "install_files" instead of "ajg_dot_files".  This is because inside the package, the contents of the archive directory are copied into a directory name install_files.
+Notice that the -i argument to accountutil specifies "./" instead of "ajg_dot_files".  This is because the setup file is always run from within the archive directory.
 
 License
 =======
