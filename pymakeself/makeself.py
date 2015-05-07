@@ -135,18 +135,23 @@ def main():
         if script_name:
             sys.path.insert(0, pkg_path)
             orig_dir = os.getcwd()
-            if archive_name:
-                arch_path = os.path.join(pkg_path, archive_name)
-                sys.path.insert(0, arch_path)
-                # Just in case setup script expects to be in archive dir.
+            os.chdir(pkg_path)
+            arch_path = os.path.join(pkg_path, 'install_files')
+            sys.path.insert(0, arch_path)
+            if in_archive:
                 os.chdir(arch_path)
-            else:
-                os.chdir(pkg_path)
+
             sys.argv = [script_name]
             sys.argv.extend(script_args)
             with open(script_name) as f:
                 code = compile(f.read(), script_name, 'exec')
-                exec(code, {'__name__': '__main__'})
+
+            if not in_archive:
+                # Setup script expects to be run from in archive dir, even if
+                # it was not located in archive dir.
+                os.chdir(arch_path)
+
+            exec(code, {'__name__': '__main__'})
             # *** DO NO EXPECT EXECUTION PAST THIS POINT ***
             # setup script may call sys.exit()
     except RuntimeError as e:
@@ -200,9 +205,8 @@ def make_package(archive_dir, file_name, setup_script=None, script_args=(),
         _copy_package_files(pkg_path, archive_dir, setup_script, in_archive,
                             tools)
         tar_path, md5_sum = _archive_package(pkg_path, compress, md5)
-        archive_name = os.path.basename(archive_dir) if in_archive else None
         return _pkg_to_exe(tar_path, file_name, setup_script, script_args,
-                           archive_name, md5_sum)
+                           in_archive, md5_sum)
     finally:
         # Always clean up temporary work directory.
         shutil.rmtree(tmp_dir, True)
@@ -286,7 +290,7 @@ def _archive_package(pkg_path, compress, md5):
     return tar_path, md5_sum
 
 
-def _pkg_to_exe(tar_path, file_name, setup_script, script_args, archive_name,
+def _pkg_to_exe(tar_path, file_name, setup_script, script_args, in_archive,
                 md5_sum):
     tar_name = os.path.basename(tar_path)
     exe_path = os.path.abspath(file_name) + '.py'
@@ -319,10 +323,10 @@ def _pkg_to_exe(tar_path, file_name, setup_script, script_args, archive_name,
             script_name = os.path.basename(setup_script)
             #script_name = script_name.rsplit('.py', 1)[0]
             exe_f.write("script_name = '%s'\n" % (script_name,))
-            if archive_name:
-                exe_f.write("archive_name = '%s'\n" % (archive_name,))
+            if in_archive:
+                exe_f.write("in_archive = True\n")
             else:
-                exe_f.write("archive_name = None\n")
+                exe_f.write("in_archive = False\n")
             exe_f.write('script_args = %s\n' % (repr(tuple(script_args)),))
         else:
             exe_f.write("script_name = None\n")
