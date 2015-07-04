@@ -8,7 +8,7 @@ pymakeself is a Python script that generates a self-extractable tar.gz archive f
 
 The makeself.py script itself is used only to create the archives from a directory of files.  The resultant archive is actually a compressed (using gzip or bzip2) TAR archive, with a small Python script stub at the beginning.  This small stub performs all the steps of extracting the files, running the embedded command, and removing the temporary files when it's all over.  All that the user has to do to install the software contained in such an archive is to "run" the archive, i.e python nice-software.py.
 
-This code is intended to be as portable as possible and should run on any system with an installation of python2.7 or later.
+This code is intended to be as portable as possible and should run on any system with an installation of python2.7 or later.  Othen than Python, tt does not rely on external utilities such as tar, gzip, bash etc.
 
 As of version 0.1.0, PyMakeSelf has been tested on the following platforms:
 
@@ -80,12 +80,12 @@ python -m pymakeself /storage/myfiles install_stuff setup.py
 
 Create an installer that runs the accountutil.py tool (one of the modules in the pymakeself installtools) as the setup script, to create the "ajg" user account:
 ```
-python -m pymakeself ~/ajg_dot_files create_ajg accountutil \
+python -m pymakeself ~/ajg_dot_files create_ajg @accountutil \
 -c 'Andrew J. Gillis' -i ./ ajg
 ```
-Specifying `accountutil` as the install script tells pymakeself to use the UNIX account creation tool, that is included with the pymakeself package.
+Specifying `@accountutil` as the install script tells pymakeself to use the UNIX account creation tool, that is included with the pymakeself package.
 
-Notice that the -i argument to accountutil specifies "./" instead of "ajg_dot_files".  This is because the setup file is always run from within the archive directory.
+Notice that the `-i` argument to accountutil specifies "./" instead of "ajg_dot_files".  This is because the setup file is always run from within the archive directory.
 
 ## Project Links
 
