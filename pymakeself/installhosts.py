@@ -85,49 +85,20 @@ def install_on_hosts(script_path, hosts, conf_path):
     return True
 
 
-def _usage(prg):
-    print('Usage: python', prg, '[options] package_script')
-    print('\nOptions:')
-    print('  --config, -c : Config file path.')
-    print('  --help, -h   : Print out this help message.')
-    print('  --install    : Install on the specified host.  Multiple OK.')
-    print()
-
-
 def main():
-    args = list(sys.argv)
-    prg = args.pop(0)
-    missing_msg = 'missing argument following'
-    install = []
-    package_script = None
-    conf_file = None
-    while args:
-        arg = args.pop(0)
-        if arg in ('-c', '--config'):
-            if not args:
-                raise RuntimeError(missing_msg, arg)
-            conf_file = args.pop(0)
-        elif arg == '--install':
-            if not args:
-                raise RuntimeError(missing_msg, arg)
-            install.append(args.pop(0))
-        elif arg in ('--help', '-h', '-?'):
-            _usage(prg)
-            return 0
-        elif arg[0] == '-':
-            print('unrecognized argument:', arg, file=sys.stderr)
-            print('see:', prg, '--help', file=sys.stderr)
-            return 1
-        else:
-            package_script = arg
+    import argparse
+    ap = argparse.ArgumentParser(description='User account creation utility.')
+    ap.add_argument('--config', '-c', dest='conf_file',
+                    help='Config file path.')
+    ap.add_argument('--install', action='append',
+                    help='Install on the specified host.  Multiple OK.')
+    ap.add_argument('script', dest='package_script',
+                    help='Package install script to run.')
+    args = ap.parse_args()
 
-    if not package_script:
-        print('missing package script', file=sys.stderr)
-        print('see:', prg, '--help', file=sys.stderr)
+    if not install_on_hosts(args.package_script, args.install, args.conf_file):
         return 1
-
-    if not install_on_hosts(package_script, install, conf_file):
-        return 1
+    return 0
 
 
 if __name__ == '__main__':

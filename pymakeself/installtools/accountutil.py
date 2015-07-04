@@ -319,86 +319,41 @@ def install(login, comment, files_dir=None, passwd=None, home_dir=None,
 
 
 def main():
-    args = list(sys.argv)
-    prg = args.pop(0)
-    login = comment = passwd = home_dir = group = None
-    admin = True
-    install_src = None
-    script = False
-
-    missing_msg = 'missing argument following'
-    while args:
-        arg = args.pop(0)
-        if arg == '-n':
-            admin = False
-        elif arg == '-c':
-            if not args:
-                raise RuntimeError(missing_msg, arg)
-            comment = args.pop(0)
-        elif arg == '-d':
-            if not args:
-                raise RuntimeError(missing_msg, arg)
-            home_dir = args.pop(0)
-        elif arg == '-g':
-            if not args:
-                raise RuntimeError(missing_msg, arg)
-            group = args.pop(0)
-        elif arg == '-p':
-            if not args:
-                raise RuntimeError(missing_msg, arg)
-            passwd = args.pop(0)
-        elif arg == '-i':
-            if not args:
-                raise RuntimeError(missing_msg, arg)
-            install_src = os.path.abspath(os.path.expanduser(args.pop(0)))
-        elif arg == '-s':
-            script = True
-        elif arg in ('-h', '--help'):
-            print('Usage: python', prg, '[options] login')
-            print('\nOptions:')
-            print('  -c comment : Comment (full name)')
-            print('  -d dir     : Home directory.  Use default if not given.')
-            print('  -g group   : Primary group.  Use default if not given.')
-            print('  -n         : Non-admin account.  Default is admin.')
-            print('  -p passwd  : Password.  Default is no password access.')
-            print()
-            print('  -i dir     : Path to directory containing files and '
-                  'directories to install.')
-            print('  -s         : Create a script to run accountutil.')
-            print()
-            print('Example:')
-            print("python makeinstaller.py -c 'Andrew J. Gillis' -i dot_files "
-                  "ajg")
-            print()
-            return 0
-        elif arg[0] != '-':
-            login = arg
-        else:
-            print('unrecognized argument:', arg, file=sys.stderr)
-            print('see:', prg, '--help', file=sys.stderr)
-            return 1
-
-    if not login:
-        print('missing login', file=sys.stderr)
-        print('see:', prg, '--help', file=sys.stderr)
-        return 1
+    import argparse
+    ap = argparse.ArgumentParser(description='User account creation utility.')
+    ap.add_argument('-n', action='store_falst', dest='admin')
+    ap.add_argument('-c', dest='comment', help='Comment (full name)')
+    ap.add_argument('-d', dest='home_dir',
+                    help='Home directory.  Use default if not given.')
+    ap.add_argument('-g', dest='group',
+                    help='Primary group.  Use default if not given.')
+    ap.add_argument('-p', dest='passwd',
+                    help='Password.  Default is no password access.')
+    ap.add_argument('-i', dest='install_src', metavar='directory',
+                    help='Path to directory containing files and directories '
+                    'to install.')
+    ap.add_argument('-s', action='store_true', dest='script',
+                    help='Create a script to run accountutil.')
+    ap.add_argument('login', help='Account login wsername.')
+    args = ap.parse_args()
 
     print('Account info:')
-    print('  login:', login)
-    print('  comment:', comment if comment else '""')
-    print('  password:', '*' * 8 if passwd else '<disabled>')
-    print('  home:', home_dir if home_dir else '<default>')
-    print('  group:', group if group else '<default>')
-    print('  admin:', admin)
+    print('  login:', args.login)
+    print('  comment:', args.comment if args.comment else '""')
+    print('  password:', '*' * 8 if args.passwd else '<disabled>')
+    print('  home:', args.home_dir if args.home_dir else '<default>')
+    print('  group:', args.group if args.group else '<default>')
+    print('  admin:', args.admin)
     print()
 
-    if script:
+    if args.script:
         with open('create_script.py', 'w') as cscript:
             sys.argv.remove('-s')
             print('python', ' '.join(sys.argv), file=cscript)
             return 0
 
-    msg = install(login, comment, install_src, passwd, home_dir, group, admin)
+    msg = install(args.login, args.comment, args.install_src, args.passwd,
+                  args.home_dir, args.group, args.admin)
     print(msg)
     return 0
 

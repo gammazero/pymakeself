@@ -5,12 +5,12 @@ The installer contains a copy of the contents of a specified directory, and it c
 
 The installer is created by first creating a directory, package_name, that
 contains a subdirectory called 'install_files'.  The 'install_files'
-subdirectory contains a copy of the contents of the specified archive_dir.  If
+subdirectory contains a copy of the contents of the specified content_dir.  If
 a setup_script is specified, then that setup_script also copied into the
 package_name dir, along with the installtools if those are requested.
 
     somewhere/
-        archive_dir/ }---------+
+        content_dir/ }---------+
                                |
     someplace/                 |
         setupscript.py }-----+ |
@@ -25,7 +25,7 @@ package_name dir, along with the installtools if those are requested.
                 ...
 
 
-The package_name directory is they archived into a tar file:
+The package_name directory is then archived into a tar file:
 
     working_tmp_dir/
         +--------------------+
@@ -68,10 +68,7 @@ try:
 except ImportError:
     pass
 
-__version__ = '1.0.0'
-__author__ = 'Andrew J. Gillis'
-__maintainer__ = 'Andrew J. Gillis'
-__email__ = 'andrew.gillis@gmail.com'
+__version__ = '0.2.0'
 
 _exe_template = \
 """
@@ -81,15 +78,15 @@ import shutil
 import tempfile
 import os
 import sys
+import argparse
 
 
 def main():
-    if len(sys.argv) > 1 and sys.argv[1] in ('--help', '-h', '-?'):
-        print('Usage: python', sys.argv[0], '[--check] [--extract]')
-        print('    --check   : Check hash and exit')
-        print('    --extract : Extract package contents and exit')
-        print()
-        return 0
+    ap = argparse.ArgumentParser(description='Self-extracting install script')
+    ap.add_argument('--check', action='store_true', help='Check hash and exit')
+    ap.add_argument('--extract', action='store_true',
+                    help='Extract package contents and exit')
+    args = ap.parse_args()
 
     tmp_dir = None
     orig_dir = None
@@ -118,8 +115,11 @@ def main():
         else:
             print('===> MD5 not checked')
 
-        if len(sys.argv) > 1 and sys.argv[1] == '--check':
+        if args.check:
             return 0
+
+        if label:
+            print(label)
 
         # Unpack the tarfile.
         with tarfile.open(tar_path) as t:
@@ -127,7 +127,7 @@ def main():
         os.unlink(tar_path)
 
         pkg_path = os.path.join(tmp_dir, pkg_name)
-        if len(sys.argv) > 1 and sys.argv[1] == '--extract':
+        if args.extract:
             print('Extracted package:', pkg_path)
             tmp_dir = None
             return 0
@@ -138,7 +138,7 @@ def main():
             os.chdir(pkg_path)
             arch_path = os.path.join(pkg_path, 'install_files')
             sys.path.insert(0, arch_path)
-            if in_archive:
+            if in_content:
                 os.chdir(arch_path)
 
             sys.argv = [script_name]
@@ -146,8 +146,8 @@ def main():
             with open(script_name) as f:
                 code = compile(f.read(), script_name, 'exec')
 
-            if not in_archive:
-                # Setup script expects to be run from in archive dir, even if
+            if not in_content:
+                # Setup script expects to be run from in content dir, even if
                 # it was not located in archive dir.
                 os.chdir(arch_path)
 
@@ -172,24 +172,24 @@ if __name__ == '__main__':
 """
 
 
-def make_package(archive_dir, file_name, setup_script=None, script_args=(),
+def make_package(content_dir, file_name, setup_script=None, script_args=(),
                  target=None, md5=True, compress='gz', follow=False,
-                 tools=False, quiet=False):
-    if not os.path.isdir(archive_dir):
-        raise RuntimeError('archive directory not found: ' + archive_dir)
+                 tools=False, quiet=False, label=None):
+    if not os.path.isdir(content_dir):
+        raise RuntimeError('content directory not found: ' + content_dir)
 
-    in_archive = False
-    archive_dir = os.path.abspath(archive_dir)
+    in_content = False
+    content_dir = os.path.abspath(content_dir)
     if setup_script:
-        if os.path.dirname(setup_script) == '.':
-            # If setup_script starts with ./ this means it is in archive dir.
+        if not os.path.dirname(setup_script):
+            # If setup_script starts has not dir in path, it is in content dir.
             setup_script = os.path.join(
-                archive_dir, os.path.basename(setup_script))
-            in_archive = True
+                content_dir, os.path.basename(setup_script))
+            in_content = True
         else:
             setup_script = os.path.abspath(setup_script)
-            if os.path.dirname(setup_script) == archive_dir:
-                in_archive = True
+            if os.path.dirname(setup_script) == content_dir:
+                in_content = True
 
         if not os.path.isfile(setup_script):
             raise RuntimeError('setup script not found: ' + setup_script)
@@ -202,17 +202,17 @@ def make_package(archive_dir, file_name, setup_script=None, script_args=(),
     tmp_dir = tempfile.mkdtemp('_pymakeself')
     pkg_path = os.path.join(tmp_dir, os.path.basename(file_name))
     try:
-        _copy_package_files(pkg_path, archive_dir, setup_script, in_archive,
+        _copy_package_files(pkg_path, content_dir, setup_script, in_content,
                             tools)
         tar_path, md5_sum = _archive_package(pkg_path, compress, md5)
         return _pkg_to_exe(tar_path, file_name, setup_script, script_args,
-                           in_archive, md5_sum)
+                           in_content, md5_sum, label)
     finally:
         # Always clean up temporary work directory.
         shutil.rmtree(tmp_dir, True)
 
 
-def _copy_package_files(pkg_path, install_src, setup_script, in_archive,
+def _copy_package_files(pkg_path, install_src, setup_script, in_content,
                         tools):
     os.mkdir(pkg_path)
     install_dst = os.path.join(pkg_path, 'install_files')
@@ -234,7 +234,7 @@ def _copy_package_files(pkg_path, install_src, setup_script, in_archive,
         shutil.copymode(src_auth_keys, dst_dot_ssh)
 
     if setup_script:
-        if in_archive:
+        if in_content:
             print('===> setup script already included in archived files')
         else:
             print('===> packaging setup script:', setup_script)
@@ -290,8 +290,8 @@ def _archive_package(pkg_path, compress, md5):
     return tar_path, md5_sum
 
 
-def _pkg_to_exe(tar_path, file_name, setup_script, script_args, in_archive,
-                md5_sum):
+def _pkg_to_exe(tar_path, file_name, setup_script, script_args, in_content,
+                md5_sum, label):
     tar_name = os.path.basename(tar_path)
     exe_path = os.path.abspath(file_name) + '.py'
     if os.path.exists(exe_path):
@@ -301,38 +301,41 @@ def _pkg_to_exe(tar_path, file_name, setup_script, script_args, in_archive,
     print('===> writing executable:', exe_path)
     with open(exe_path, 'w') as exe_f:
         # Write interpreter invocation line.
-        exe_f.write('#!/usr/bin/env python\n#\n')
+        print('#!/usr/bin/env python', '#', sep='\n', file=exe_f)
         # Write comment into executable script.
-        exe_f.write('#\n')
-        exe_f.write('# Extracts archive %s and runs setup script.' % tar_name)
-        exe_f.write('\n#\n')
-        exe_f.write('from __future__ import print_function\n')
+        print('#',
+              '# Extracts archive %s and runs setup script.' % tar_name,
+              '#',
+              'from __future__ import print_function', sep='\n', file=exe_f)
         # Write base64-encoded tar file into executable script.
-        exe_f.write('PKG_DATA = b"""\n')
-        with open(tar_path) as pkg_f:
-            base64.encode(pkg_f, exe_f)
+        print('PKG_DATA = ', end='', file=exe_f)
+        with open(tar_path, 'rb') as pkg_f:
+            exe_f.write(str(base64.b64encode(pkg_f.read())))
         # Write data about install module, tar file, and package into script.
-        exe_f.write('"""\n\n')
-        exe_f.write("tar_name = '%s'\n" % (tar_name,))
+        print("\ntar_name = '%s'" % (tar_name,), file=exe_f)
         if md5_sum:
-            exe_f.write("md5_sum = '%s'\n" % (md5_sum,))
+            print("md5_sum = '%s'" % (md5_sum,), file=exe_f)
         else:
-            exe_f.write("md5_sum = None\n" % (md5_sum,))
-        exe_f.write("pkg_name = '%s'\n" % (tar_name.rsplit('.tar', 1)[0],))
+            print("md5_sum = None", file=exe_f)
+        if label:
+            print("label = '%s'" % (label,), file=exe_f)
+        else:
+            print("label = None", file=exe_f)
+        print("pkg_name = '%s'" % (tar_name.rsplit('.tar', 1)[0],), file=exe_f)
         if setup_script:
             script_name = os.path.basename(setup_script)
             #script_name = script_name.rsplit('.py', 1)[0]
-            exe_f.write("script_name = '%s'\n" % (script_name,))
-            if in_archive:
-                exe_f.write("in_archive = True\n")
+            print("script_name = '%s'" % (script_name,), file=exe_f)
+            if in_content:
+                print("in_content = True", file=exe_f)
             else:
-                exe_f.write("in_archive = False\n")
-            exe_f.write('script_args = %s\n' % (repr(tuple(script_args)),))
+                print("in_content = False", file=exe_f)
+            print('script_args = %s' % (repr(tuple(script_args)),), file=exe_f)
         else:
-            exe_f.write("script_name = None\n")
+            print("script_name = None", file=exe_f)
 
         # Write executable logic, from template, into executable script.
-        exe_f.write(_exe_template)
+        print(_exe_template, file=exe_f)
 
     # Remove the tar file that was written into the executable script.
     os.unlink(tar_path)
@@ -346,132 +349,97 @@ def _pkg_to_exe(tar_path, file_name, setup_script, script_args, in_archive,
     return exe_path
 
 
-def _usage(prg):
-    print('Usage: python', prg, '[options] archive_dir file_name setup_script '
-          '[args]')
-    print('\nOptions:')
-    print('  --version    : Print out PyMakeSelf version number and exit.')
-    print('  --help, -h   : Print out this help message.')
-    print('  --quiet, -q  : Do not print any messages other than errors.')
-    print('  --tools, -t  : Include installtools module.')
-    print('  --gzip       : Compress using gzip (default).')
-    print('  --bzip2      : Compress using bzip2 instead of gzip.')
-    if 'lzma' in dir():
-        print('  --xz         : Compress using xz instead of gzip.')
-    print('  --current    : Extract to current directory, instead of to a '
-          'temporary')
-    print('                 directory (temporary is default).  This is the '
-          'same as ')
-    print('                 specifying --target ./')
-    print('  --target dir : Extract directly to a target directory, '
-          'instead of to a ')
-    print('                 temporary directory (temporary is default).')
-    print('  --nomd5      : Do not calculate MD5 for archive.')
-    print('  --follow     : Follow symlinks in the archive.')
-    print('  --install    : Install on the specified host.  Multiple OK.')
-    print()
-    print('Do not forget to give a fully qualified startup script name')
-    print('(i.e. with a ./ prefix if inside the archive).')
-    print()
-    print('\nExample:')
-    print('python', prg, '/storage/myfiles install_stuff setup.py x y z')
-    print()
-
-
 def main(prg=None):
-    compress = 'gz'
-    quiet = False
-    tools = False
-    md5 = True
-    follow = False
-    target = None
-    archive_dir = file_name = setup_script = None
-    script_args = ()
-    install = []
+    import argparse
+    ap = argparse.ArgumentParser(
+        prog=prg, description='Create executable (self-extracting) installer '
+        'Python script.',
+        epilog='home page: https://github.com/gammazero/pymakeself')
+    ap.set_defaults(compress='gz')
 
-    args = list(sys.argv)
-    if prg:
-        args.pop(0)
-    else:
-        prg = os.path.basename(args.pop(0))
+    ap.add_argument('--label', metavar='text',
+                    help='Arbitrary text string describing the package. It '
+                    'will be displayed while extracting the files.')
+    ap.add_argument('--gzip', action='store_const', const='gz',
+                    dest='compress', help='Compress using gzip (default).')
+    ap.add_argument('--bzip2', action='store_const', const='bz2',
+                    dest='compress',
+                    help='Compress using bzip2 instead of gzip.')
+    if 'lzma' in dir():
+        ap.add_argument('--xz', action='store_const', const='xz',
+                        dest='compress',
+                        help='Compress using xz instead of gzip.')
+    ap.add_argument('--follow', action='store_true',
+                    help='Follow symlinks in the archive.')
+    ap.add_argument('--tools', '-t', action='store_true',
+                    help='Include installtools module.')
+    ap.add_argument('--quiet', '-q', action='store_true',
+                    help='Do not print any messages other than errors.')
+    ap.add_argument('--target', metavar='dir',
+                    help='Extract directly to a target directory, instead of '
+                    'to a temporary directory (temporary is default).')
+    ap.add_argument('--current', action='store_const', const='./',
+                    dest='target', help='Extract to current directory, '
+                    'instead of to a temporary')
+    ap.add_argument('--nomd5', action='store_false', dest='md5',
+                    help='Do not calculate MD5 for archive.')
+    ap.add_argument('--install', action='append', metavar='host_addr',
+                    help='Install on the specified host.  Multiple OK.')
+    ap.add_argument('--version', action='version', version=__version__)
+    ap.add_argument('content', help='Directory containing files to be '
+                    'archived in installer.')
+    ap.add_argument('installer_name',
+                    help='Name for the executable that is created.')
+    ap.add_argument(
+        'setup_script', nargs='?',
+        help='Python script to be executed from within the extracted content '
+        'directory, that is run using the same Python interpreter used to run '
+        'the installer. If the script is already located inside the content '
+        'directory then only specify the name of the script.  Otherwise, '
+        'provide a relative or absolute path to the script so that it can be '
+        'copied into the installer archive.  The special value "@accountutil" '
+        'tells pymakeself to use the UNIX account creation tool, included in '
+        'the pymakeself package, as the setup_command')
 
-    missing_msg = 'missing argument following'
-    while args:
-        arg = args.pop(0)
-        if arg in ('--version', '-v'):
-            print('PyMakeSelf version', __version__)
-            return 0
-        elif arg == '--gzip':
-            compress = 'gz'
-        elif arg == '--bzip2':
-            compress = 'bz2'
-        elif arg == '--xz' and 'lzma' in dir():
-            compress = 'xz'
-        elif arg in ('--tools', '-t'):
-            tools = True
-        elif arg in ('--quiet', '-q'):
-            quiet = True
-        elif arg == '--target':
-            if not args:
-                raise RuntimeError(missing_msg, arg)
-            target = args.pop(0)
-        elif arg == '--current':
-            target = './'
-        elif arg == '--nomd5':
-            md5=False
-        elif arg == '--install':
-            if not args:
-                raise RuntimeError(missing_msg, arg)
-            install.append(args.pop(0))
-        elif arg in ('--help', '-h', '-?'):
-            _usage(prg)
-            return 0
-        elif arg[0] == '-':
-            print('unrecognized argument:', arg, file=sys.stderr)
-            print('see:', prg, '--help', file=sys.stderr)
-            return 1
-        elif not archive_dir:
-            archive_dir = os.path.abspath(os.path.expanduser(arg))
-        elif not file_name:
-            file_name = os.path.expanduser(arg)
-        else:
-            if arg == 'accountutil':
-                setup_script = os.path.join(
-                    os.path.dirname(os.path.abspath(__file__)),
-                    'installtools', 'accountutil.py')
-            else:
-                setup_script = os.path.expanduser(arg)
-            script_args = tuple(args)
-            break
+    ap.add_argument('setup_args', nargs=argparse.REMAINDER,
+                    help='Arguments to pass into Python setup script when run '
+                    'during execution of the installer.')
+    args = ap.parse_args()
 
-    if not (archive_dir and file_name):
-        print('missing one or more required arguments', file=sys.stderr)
-        print('see:', prg, '--help', file=sys.stderr)
-        return 1
+    if args.setup_script:
+        if args.setup_script =='@accountutil':
+            args.setup_script = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                'installtools', 'accountutil.py')
+        elif os.path.dirname(args.setup_script):
+            args.setup_script = os.path.expanduser(args.setup_script)
 
-    print('compress:', compress)
-    print('target:', target)
-    print('md5:', md5)
-    print('quiet:', quiet)
-    print('tools:', tools)
-    print('follow:', follow)
-    print('archive_dir:', archive_dir)
-    print('file_name:', file_name)
-    print('setup_script:', setup_script)
-    print('script args:', ' '.join(('"%s"' % (a,) for a in script_args)))
+    print('compress:', args.compress)
+    print('target:', args.target)
+    print('md5:', args.md5)
+    print('quiet:', args.quiet)
+    print('tools:', args.tools)
+    print('follow:', args.follow)
+    print('label:', args.label)
+    print('content_dir: ', args.content, '/', sep='')
+    print('installer_name:', args.installer_name)
+    print('setup_script:', os.path.relpath(args.setup_script))
+    print('script args:', ' '.join(('"%s"' % (a,) for a in args.setup_args)))
 
     try:
         exe_path = make_package(
-            archive_dir, file_name, setup_script, script_args, target, md5,
-            compress, follow, tools, quiet)
+            args.content, args.installer_name, args.setup_script,
+            args.setup_args, args.target, args.md5, args.compress,
+            args.follow, args.tools, args.quiet, args.label)
     except Exception as ex:
         print(ex, file=sys.stderr)
+        raise
         return 1
 
-    if install:
+    if args.install:
         # Create temporary conf file.
         import installhosts
-        if not installhosts.install_on_hosts(exe_path, install, None):
+        if not installhosts.install_on_hosts(exe_path, args.install, None):
             return 1
     else:
         print('\nRun', os.path.basename(exe_path), 'to extract files and run '

@@ -3,11 +3,13 @@ try:
 except ImportError:
     from distutils.core import setup
 
+from pymakeself.makeself import __version__
+
 
 def main():
     setup(
         name='pymakeself',
-        version= '0.1.0',
+        version=__version__,
         author='Andrew Gillis',
         author_email='gillis.andrewj@gmail.com',
         url='https://github.com/gammmazero/pymakeself',

@@ -23,7 +23,7 @@ Testing with these whould be done soon:
 ## Usage
 
 The syntax of makeself.py is the following:
-makeself.py [args] archive_dir file_name startup_script [script_args]
+makeself.py [args] content_dir file_name startup_script [script_args]
 
 args are optional options for Makeself.  The available ones are:
 `--version` : Prints the version number on stdout, then exits immediately
@@ -34,9 +34,9 @@ args are optional options for Makeself.  The available ones are:
 
 `--tools, -t`  : Include installtools module.
 
-`--gzip` : Use gzip for compression (is the default on platforms on which gzip is commonly available, like Linux)
+`--gzip` : Use gzip for compression (is the default)
 
-`--bzip2` : Use bzip2 instead of gzip for better compression. The bzip2 command must be available in the command path. I recommend that you set the prefix to something like '.bz2.run' for the archive, so that potential users know that they'll need bzip2 to extract it.
+`--bzip2` : Use bzip2 instead of gzip for better compression.
 
 `--xz` : Compress using xz instead of gzip.  This requires Python3.x for both creation and extraction.
 
@@ -48,17 +48,19 @@ args are optional options for Makeself.  The available ones are:
 
 `--nomd5` : Disable the creation of a MD5 checksum for the archive.  This speeds up the extraction process if integrity checking is not necessary.
 
-archive_dir is the name of the directory that contains the files to be archived
+content_dir is the name of the directory that contains the files to be archived
 
-file_name is the name of the archive to be created
+file_name is the name of the installer script to be created
 
-startup_script is the command to be executed, from within the archive directory, when the archive is extracted.  If the startup script is located in the archive directory, then prefix it with "./" as a shortcut for specifying its path.  When the archive is extracted, all of the contained files are put in subdirectory called "install_files".  If the startup_script needs to refer to the archive directory, then it will first need to cd to the parent directory and then work with the "install_files" subdirectory.  The script_args are additionnal arguments for this command.
+startup_script is a Python script to be executed from within the extracted content directory, that is run using the same Python interpreter used to run the installer.  If the script is already located inside the content directory then only specify the name of the script.  Otherwise, provide a relative or absolute path to the script so that it can be copied into the installer archive.  The special value "@accountutil" tells pymakeself to use the UNIX account creation tool, included in the pymakeself package, as the setup_command.
 
-Here is an example, assuming the user has a package image stored in a /home/joe/mysoft, and he wants to generate a self-extracting package named install_mysoft.py, which will launch the "setup" script initially stored in /home/joe/mysoft :
-makeself.py /home/joe/mysoft mysoft "Joe's Nice Software Package" ./setup
+Here is an example, assuming the user has a package image stored in a /home/joe/mysoft, and he wants to generate a self-extracting package named install_mysoft.py, which will launch the "setup.py" script initially stored in /home/joe/mysoft:
+pymakeself.py --label "Joe's Nice Software Package" /home/joe/mysoft install_mysoft setup.py
 
-Here is also how I created the install_pymakeself.py archive which contains the Makeself distribution :
-```python makeself.py --notemp PyMakeSelf pymakeself "PyMakeSelf by Andrew Gillis" python ./setup.py```
+Here is also how I created the install_pymakeself.py installer that installs the pymakeself distribution:
+```
+python -m pymakeself --label "PyMakeSelf by Andrew Gillis" pymakeself install_pymakeself setup.py install
+```
 
 Archives generated with pymakeself can be passed the following arguments:
 
@@ -77,10 +79,10 @@ python -m pymakeself /storage/myfiles install_stuff setup.py
 ```
 
 Create an installer that runs the accountutil.py tool (one of the modules in the pymakeself installtools) as the setup script, to create the "ajg" user account:
-
-  python -m pymakeself ~/ajg_dot_files create_ajg accountutil \
-  -c 'Andrew J. Gillis' -i ./ ajg
-
+```
+python -m pymakeself ~/ajg_dot_files create_ajg accountutil \
+-c 'Andrew J. Gillis' -i ./ ajg
+```
 Specifying `accountutil` as the install script tells pymakeself to use the UNIX account creation tool, that is included with the pymakeself package.
 
 Notice that the -i argument to accountutil specifies "./" instead of "ajg_dot_files".  This is because the setup file is always run from within the archive directory.
