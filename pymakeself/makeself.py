@@ -68,7 +68,7 @@ try:
 except ImportError:
     pass
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 _exe_template = \
 """
@@ -165,10 +165,6 @@ def main():
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
     return 0
-
-
-if __name__ == '__main__':
-    sys.exit(main())
 """
 
 
@@ -307,10 +303,10 @@ def _pkg_to_exe(tar_path, file_name, setup_script, script_args, in_content,
               '# Extracts archive %s and runs setup script.' % tar_name,
               '#',
               'from __future__ import print_function', sep='\n', file=exe_f)
-        # Write base64-encoded tar file into executable script.
-        print('PKG_DATA = ', end='', file=exe_f)
-        with open(tar_path, 'rb') as pkg_f:
-            exe_f.write(str(base64.b64encode(pkg_f.read())))
+
+        # Write executable logic, from template, into executable script.
+        print(_exe_template, file=exe_f)
+
         # Write data about install module, tar file, and package into script.
         print("\ntar_name = '%s'" % (tar_name,), file=exe_f)
         if md5_sum:
@@ -334,8 +330,13 @@ def _pkg_to_exe(tar_path, file_name, setup_script, script_args, in_content,
         else:
             print("script_name = None", file=exe_f)
 
-        # Write executable logic, from template, into executable script.
-        print(_exe_template, file=exe_f)
+        # Write base64-encoded tar file into executable script.
+        print('\nPKG_DATA = b"""', end='', file=exe_f)
+        with open(tar_path, 'rb') as pkg_f:
+            exe_f.write(str(base64.b64encode(pkg_f.read())))
+        print('"""\n', file=exe_f)
+        print('if __name__ == "__main__":',
+              '    sys.exit(main())', sep='\n', file=exe_f)
 
     # Remove the tar file that was written into the executable script.
     os.unlink(tar_path)

@@ -321,7 +321,7 @@ def install(login, comment, files_dir=None, passwd=None, home_dir=None,
 def main():
     import argparse
     ap = argparse.ArgumentParser(description='User account creation utility.')
-    ap.add_argument('-n', action='store_falst', dest='admin')
+    ap.add_argument('-n', action='store_false', dest='admin')
     ap.add_argument('-c', dest='comment', help='Comment (full name)')
     ap.add_argument('-d', dest='home_dir',
                     help='Home directory.  Use default if not given.')
