@@ -71,7 +71,8 @@ except ImportError:
 __version__ = '0.2.1'
 
 _exe_template = \
-"""
+b"""
+from __future__ import print_function
 import base64
 import tarfile
 import shutil
@@ -294,49 +295,49 @@ def _pkg_to_exe(tar_path, file_name, setup_script, script_args, in_content,
         print('===> removing existing installer:', exe_path, file=sys.stderr)
         os.unlink(exe_path)
 
+    u8 = 'utf-8'
     print('===> writing executable:', exe_path)
-    with open(exe_path, 'w') as exe_f:
+    with open(exe_path, 'wb') as exe_f:
         # Write interpreter invocation line.
-        print('#!/usr/bin/env python', '#', sep='\n', file=exe_f)
+        exe_f.write(b'#!/usr/bin/env python\n')
         # Write comment into executable script.
-        print('#',
-              '# Extracts archive %s and runs setup script.' % tar_name,
-              '#',
-              'from __future__ import print_function', sep='\n', file=exe_f)
+        exe_f.write(b'#\n# Extracts archive and runs setup script.\n#\n')
 
         # Write executable logic, from template, into executable script.
-        print(_exe_template, file=exe_f)
+        exe_f.write(_exe_template)
 
         # Write data about install module, tar file, and package into script.
-        print("\ntar_name = '%s'" % (tar_name,), file=exe_f)
+        s = "\ntar_name = '%s'\n" % (tar_name,)
+        exe_f.write(s.encode(u8))
         if md5_sum:
-            print("md5_sum = '%s'" % (md5_sum,), file=exe_f)
+            exe_f.write(("md5_sum = '%s'\n" % (md5_sum,)).encode(u8))
         else:
-            print("md5_sum = None", file=exe_f)
+            exe_f.write(b"md5_sum = None\n")
         if label:
-            print("label = '%s'" % (label,), file=exe_f)
+            exe_f.write(("label = '%s'\n" % (label,)).encode(u8))
         else:
-            print("label = None", file=exe_f)
-        print("pkg_name = '%s'" % (tar_name.rsplit('.tar', 1)[0],), file=exe_f)
+            exe_f.write(b"label = None\n")
+        exe_f.write(
+            ("pkg_name = '%s'\n" % (tar_name.rsplit('.tar',1)[0],)).encode(u8))
         if setup_script:
             script_name = os.path.basename(setup_script)
-            #script_name = script_name.rsplit('.py', 1)[0]
-            print("script_name = '%s'" % (script_name,), file=exe_f)
+            exe_f.write(("script_name = '%s'\n" % (script_name,)).encode(u8))
             if in_content:
-                print("in_content = True", file=exe_f)
+                exe_f.write(b"in_content = True\n")
             else:
-                print("in_content = False", file=exe_f)
-            print('script_args = %s' % (repr(tuple(script_args)),), file=exe_f)
+                exe_f.write(b"in_content = False\n")
+            exe_f.write(
+                ('script_args = %s\n' %(repr(tuple(script_args)),)).encode(u8))
         else:
-            print("script_name = None", file=exe_f)
+            exe_f.write(b"script_name = None\n")
 
         # Write base64-encoded tar file into executable script.
-        print('\nPKG_DATA = b"""', end='', file=exe_f)
+        exe_f.write(b'\nPKG_DATA = b"""\n')
         with open(tar_path, 'rb') as pkg_f:
-            exe_f.write(str(base64.b64encode(pkg_f.read())))
-        print('"""\n', file=exe_f)
-        print('if __name__ == "__main__":',
-              '    sys.exit(main())', sep='\n', file=exe_f)
+            base64.encode(pkg_f, exe_f)
+        exe_f.write(b'"""\n\n')
+        exe_f.write(b'if __name__ == "__main__":\n'
+                    b'    sys.exit(main())\n')
 
     # Remove the tar file that was written into the executable script.
     os.unlink(tar_path)
