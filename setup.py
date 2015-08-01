@@ -5,7 +5,9 @@ except ImportError:
 
 from pymakeself.makeself import __version__
 
-
+# This is not zip_safe because the installer creation logic needs access to the
+# raw source files in installtools/
+#
 def main():
     setup(
         name='pymakeself',
