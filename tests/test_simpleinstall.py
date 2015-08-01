@@ -1,3 +1,6 @@
+#
+# Run with py.test
+#
 from __future__ import print_function
 import os
 import subprocess
@@ -32,6 +35,7 @@ class TestSimpleInstall(object):
             shutil.rmtree(cls.dst_dir, True)
 
     def test_make_installer(self):
+        """Test creating sefl-extracting installer."""
         label = 'This is a test of pymakeself.'
         compress='gz'
         follow = False
@@ -49,16 +53,21 @@ class TestSimpleInstall(object):
             content, self.installer_name, setup_script, self.setup_args,
             target, md5, compress, follow, tools, quiet, label)
 
+        # Check that installer was created.
         assert os.path.isfile(exe_path)
         print('Created installer:', exe_path)
 
     def test_check_installer(self):
+        """Test MD5 check."""
         subprocess.check_call(('python', self.installer_name, '--check'))
 
     def test_run_installer(self):
+        """Test running installer."""
+        # Run the installer.
         subprocess.check_call(('python', self.installer_name))
         print('Ran', self.installer_name)
 
+        # Make sure all the expected file are in the install dir.
         assert os.path.isdir(self.dst_dir)
         for fname in ('foo.txt', 'bar.txt', 'baz.txt'):
             assert os.path.isfile(os.path.join(self.dst_dir, fname))
@@ -70,12 +79,13 @@ class TestSimpleInstall(object):
         assert os.path.isfile(params_path)
         print('All expected files are present.')
 
+        # Make sure there are no extra files in install dir.
         assert len(list(os.listdir(self.dst_dir))) == 4, 'unexpected files'
         print('There are no unexpected files.')
 
+        # Check that setup args were correctly received by installer.
         with open(params_path) as fin:
             params_data = fin.read().strip()
-
         assert params_data
         params = params_data.split(',')
         assert params == self.setup_args
