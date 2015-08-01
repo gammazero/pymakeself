@@ -56,6 +56,7 @@ run the setup_script script packages inside it.
 
 """
 from __future__ import print_function
+from __future__ import absolute_import
 import os
 import sys
 import shutil
@@ -440,7 +441,7 @@ def main(prg=None):
 
     if args.install:
         # Create temporary conf file.
-        import installhosts
+        from . import installhosts
         if not installhosts.install_on_hosts(exe_path, args.install, None):
             return 1
     else:
