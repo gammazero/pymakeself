@@ -14,7 +14,7 @@ def main():
         version=__version__,
         author='Andrew Gillis',
         author_email='gillis.andrewj@gmail.com',
-        url='https://github.com/gammmazero/pymakeself',
+        url='https://github.com/gammazero/pymakeself',
         description='pymakeself: make self-extracting archives',
         long_description = open('README.md').read(),
         license='http://www.opensource.org/licenses/mit-license.php',

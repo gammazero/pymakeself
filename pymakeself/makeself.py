@@ -69,7 +69,7 @@ try:
 except ImportError:
     pass
 
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 
 _exe_template = \
 b"""
@@ -436,7 +436,6 @@ def main(prg=None):
             args.follow, args.tools, args.quiet, args.label)
     except Exception as ex:
         print(ex, file=sys.stderr)
-        raise
         return 1
 
     if args.install:
