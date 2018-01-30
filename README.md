@@ -54,7 +54,7 @@ args are optional for Makeself.  The available options are:
 
 `file_name` is the name of the installer script to be created.
 
-`setup_script` is a Python script to be executed from within the extracted content directory, that is run using the same Python interpreter used to run the installer.  If the script is already located inside the content directory then only specify the name of the script.  Otherwise, provide a relative or absolute path to the script so that it can be copied into the installer archive.  The special value `@accountutil` tells pymakeself to use the UNIX account creation tool, included in the pymakeself package, as the setup_command.
+`setup_script` is a Python script to be executed from within the extracted content directory, that is run using the same Python interpreter used to run the installer.  If the script is already located inside the content directory then only specify the name of the script.  Otherwise, provide a relative or absolute path to the script so that it can be copied into the installer archive.  The special value `@accountutil` tells pymakeself to use the UNIX [account creation tool](https://github.com/gammazero/pymakeself/blob/master/pymakeself/installtools/accountutil.py), included in the pymakeself package, as the `setup_script`.
 
 Here is an example, assuming the user has a package image stored in a `/home/jane/mysoft`, and wants to generate a self-extracting package named install_mysoft.py, which will launch the `setup.py` script initially stored in `/home/jane/mysoft`:
 ```
