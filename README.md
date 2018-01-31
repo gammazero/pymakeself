@@ -8,9 +8,9 @@ pymakeself is a Python script that generates a self-extractable tar.gz archive f
 
 The makeself.py script itself is used only to create the archive from a directory of files.  The resultant archive is actually a compressed (gzip or bzip2) TAR archive, with a small Python script stub at the beginning.  This small stub performs all the steps of extracting the files, running the embedded setup script, and cleaning up afterward.  The user only needs to "run" the archive to install its contents, i.e `python install-nice-app.py`.
 
-This code is intended to be as portable as possible and should run on any system with an installation of python2.7 or later.  Othen than Python, it does not rely on external utilities such as tar, gzip, bash etc.
+This code is intended to be as portable as possible and should run on any system with an installation of python2.7 or later.  Other than Python, it does not rely on external utilities such as tar, gzip, bash etc.
 
-As of version 0.2.2, PyMakeSelf has been tested on the following platforms:
+As of version 0.2.2, pymakeself has been tested on the following platforms:
 
 - Linux (all distributions)
 - FreeBSD
@@ -20,13 +20,20 @@ Testing with these whould be done soon:
 
 - Windows7-10
 
+## Install
+
+```
+sudo pip install pymakeself
+```
+
 ## Usage
 
-The syntax of makeself.py is the following:
+The pymakeself package installs the `pymakeself` command.  This is the same as running `python -m pymakeself`, and has the following syntax:
+
 ```
-makeself.py [args] content_dir file_name [setup_script [script_args]]
+pymakeself [args] content_dir file_name setup_script [script_args]
 ```
-args are optional for Makeself.  The available options are:
+The `args` beginning with `-` or `--` are optional.  The available options are:
 
 `--version` : Prints the version number on stdout, then exits immediately
 
@@ -42,10 +49,6 @@ args are optional for Makeself.  The available options are:
 
 `--xz` : Compress using xz instead of gzip.  This requires Python3.x for both creation and extraction.
 
-`--current` : Extract to current directory, instead of to a temporary.
-
-`--target dir` : Extract directly to a target directory, instead of to a temporary directory (temporary is default).
-
 `--follow` : Follow the symbolic links inside of the archive directory, i.e. store the files that are being pointed to instead of the links themselves.
 
 `--nomd5` : Disable the creation of a MD5 checksum for the archive.  This speeds up the extraction process if integrity checking is not necessary.
@@ -54,7 +57,7 @@ args are optional for Makeself.  The available options are:
 
 `file_name` is the name of the installer script to be created.
 
-`setup_script` is a Python script to be executed from within the extracted content directory, that is run using the same Python interpreter used to run the installer.  If the script is already located inside the content directory then only specify the name of the script.  Otherwise, provide a relative or absolute path to the script so that it can be copied into the installer archive.  The special value `@accountutil` tells pymakeself to use the UNIX [account creation tool](https://github.com/gammazero/pymakeself/blob/master/pymakeself/installtools/accountutil.py), included in the pymakeself package, as the `setup_script`.
+`setup_script` is a Python script to be executed from within the extracted content directory, that is run using the same Python interpreter used to run the installer.  If the script is already located inside the content directory then only specify the name of the script.  Otherwise, provide a relative or absolute path to the script so that it can be copied into the installer archive.  The special value `@accountutil` tells pymakeself to use the Unix [account creation tool](https://github.com/gammazero/pymakeself/blob/master/pymakeself/installtools/accountutil.py), included in the pymakeself package, as the `setup_script`.
 
 Here is an example, assuming the user has a package image stored in a `/home/jane/mysoft`, and wants to generate a self-extracting package named install_mysoft.py, which will launch the `setup.py` script initially stored in `/home/jane/mysoft`:
 ```
@@ -63,14 +66,14 @@ pymakeself.py --label "Jane's Nice Software Package" /home/jane/mysoft install_m
 
 Here is how I created a `install_pymakeself.py` installer that installs the pymakeself distribution:
 ```
-python -m pymakeself --label "PyMakeSelf by Andrew Gillis" pymakeself install_pymakeself setup.py install
+pymakeself --label "PyMakeSelf by Andrew Gillis" pymakeself install_pymakeself setup.py install
 ```
 
 Archives generated with pymakeself can be passed the following arguments:
 
 `--check` : Check the archive's MD5 sum and exit.
 
-`--extract` : Extract package contents to temproary directory and exit.
+`--extract` : Extract package contents to temporary directory and exit.
 
 Any subsequent arguments to the archive will be passed as additional arguments to the embedded command.
 
@@ -79,17 +82,32 @@ Any subsequent arguments to the archive will be passed as additional arguments t
 Create an installer, named install_stuff, that runs setup.py:
 
 ```
-python -m pymakeself /storage/myfiles install_stuff setup.py
+pymakeself /storage/myfiles install_stuff setup.py
 ```
 
 Create an installer that runs the `accountutil.py` tool (one of the modules in the pymakeself installtools) as the setup script, to create the "ajg" user account:
 ```
-python -m pymakeself ~/ajg_dot_files create_ajg @accountutil \
+pymakeself ~/ajg_dot_files create_ajg @accountutil \
 -c 'Andrew J. Gillis' -i ./ ajg
 ```
 Specifying `@accountutil` as the setup script tells pymakeself to use the UNIX account creation tool, that is included with the pymakeself package.
 
 Notice that the `-i` argument to accountutil specifies `./` instead of `ajg_dot_files`.  This is because the setup file is always run from within the archive directory.
+
+## Library
+
+The pymakeself package can also be imported into a python script and used as a library.
+
+```
+from pymakeself import makeself
+
+exe_path = makeself.make_package(
+    "/home/ajg/stuff", "install_stuff", "setup.py",
+    compress="bz2", label="my cool stuff")
+
+```
+
+To see documentation on `make_package()` run: `pydoc pymakeself.makeself.make_package`
 
 ## Project Links
 
@@ -101,6 +119,6 @@ Notice that the `-i` argument to accountutil specifies `./` instead of `ajg_dot_
 
 <https://github.com/gammazero/pymakeself/issues>
 
-## Acknowledgements
+## Acknowledgments
 
 This script was inspired by, and modeled after, makeself by Stephane Peter.
