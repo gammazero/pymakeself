@@ -32,6 +32,10 @@ def main():
                      'Programming Language :: Python :: 2.7',
                      'Programming Language :: Python :: 3'],
         packages=['pymakeself', 'pymakeself.installtools'],
+        entry_points={
+            'console_scripts': [
+                'pymakeself = pymakeself.makeself:main'],
+        },
         zip_safe=False,
         )
 

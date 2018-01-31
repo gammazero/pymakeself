@@ -41,7 +41,6 @@ class TestSimpleInstall(object):
         follow = False
         tools = False
         quiet = False
-        target = None
         md5 = True
         install = []
         content = os.path.join(
@@ -51,7 +50,7 @@ class TestSimpleInstall(object):
 
         exe_path = makeself.make_package(
             content, self.installer_name, setup_script, self.setup_args,
-            target, md5, compress, follow, tools, quiet, label)
+            md5, compress, follow, tools, quiet, label)
 
         # Check that installer was created.
         assert os.path.isfile(exe_path)
