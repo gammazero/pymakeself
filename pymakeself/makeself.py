@@ -206,9 +206,8 @@ def make_package(content_dir, file_name, setup_script, script_args=(),
     content_dir = os.path.abspath(content_dir)
 
     if not os.path.dirname(setup_script):
-        # If setup_script starts has not dir in path, it is in content dir.
-        setup_script = os.path.join(
-            content_dir, os.path.basename(setup_script))
+        # If setup_script has no dir in path, then it is in content dir.
+        setup_script = os.path.join(content_dir, setup_script)
         in_content = True
     else:
         setup_script = os.path.abspath(setup_script)
@@ -447,8 +446,13 @@ def main(prg=None):
     print('content_dir: ', args.content, '/', sep='')
     print('installer_name:', args.installer_name)
     if args.setup_script:
-        print('setup_script:', os.path.abspath(args.setup_script))
-        print('script args:', ' '.join(('"%s"' % (a,) for a in args.setup_args)))
+        print('setup_script: ', end='')
+        if not os.path.dirname(args.setup_script):
+            print(os.path.join(args.content, args.setup_script))
+        else:
+            print(os.path.abspath(args.setup_script))
+        print('script args:',
+              ' '.join(('"%s"' % (a,) for a in args.setup_args)))
     else:
         print('setup_script:', 'None')
 
