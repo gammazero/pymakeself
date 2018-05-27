@@ -9,6 +9,7 @@ try:
 except:
     import aesctr
 
+
 def get_key(passwd, confirm):
     if not passwd:
         while True:
@@ -20,12 +21,12 @@ def get_key(passwd, confirm):
                 break
             print("Passwords are not equal", file=sys.stderr)
 
-
     h = hashlib.sha256()
     h.update(passwd.encode('utf-8'))
     return h.digest()
 
 NONCE_SIZE = 16
+
 
 def validate_ciphertext(aes, in_file):
     # Read encrypted nonce.
@@ -48,8 +49,10 @@ def validate_ciphertext(aes, in_file):
 
     return None
 
+
 def get_nonce():
     return os.urandom(NONCE_SIZE)
+
 
 def _do_crypto(aes, in_file, out_file):
     BLOCKSIZE = 65536
@@ -57,6 +60,7 @@ def _do_crypto(aes, in_file, out_file):
     while buf:
         out_file.write(aes.encrypt(buf))
         buf = in_file.read(BLOCKSIZE)
+
 
 def encrypt(passwd, in_file, out_file):
     aes = aesctr.AESCTRMode(get_key(passwd, True))
