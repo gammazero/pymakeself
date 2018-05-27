@@ -71,7 +71,7 @@ try:
 except ImportError:
     pass
 
-__version__ = '0.3.2'
+__version__ = '0.3.3'
 
 _exe_template = \
 b"""
@@ -526,8 +526,9 @@ def main(prg=None):
                     help='Do not print any messages other than errors.')
     ap.add_argument(
         '--sshinstall', action='append', metavar='host_addr',
-        help='Install on the specified host. Multiple OK. Use scp to copy the '
-        'installer to the host and then use ssh to run the installer.')
+        help='Install on the specified host (i.e. root@devbox1). Multiple OK. '
+        'Uses scp to copy the installer to the host and then uses ssh to run '
+        'the installer.')
     ap.add_argument('--tools', '-t', action='store_true',
                     help='Include installtools module.')
     ap.add_argument('--version', action='version', version=__version__)
@@ -607,9 +608,8 @@ def main(prg=None):
         return 1
 
     if args.sshinstall:
-        # Create temporary conf file.
         from . import installhosts
-        if not installhosts.install_on_hosts(exe_path, args.install, None):
+        if not installhosts.install_on_hosts(exe_path, args.sshinstall, None):
             return 1
     else:
         print('\nRun', os.path.basename(exe_path), 'to extract files and run '

@@ -4,21 +4,11 @@ Make self-extracting archives with Python, on most operating systems.
 
 ## Overview
 
-pymakeself is a Python script that generates a self-extractable tar.gz archive from a directory.  The resulting file appears as a Python script, and can be launched as is.  The archive will then uncompress itself to a temporary directory and run an optional python setup script.  pymakeself archives also include a SHA256 checksum for integrity self-validation.
+pymakeself is a Python script that generates a self-extractable tar.gz archive from a directory.  The resulting file appears as a Python script, and can be launched as is.  The archive will then uncompress itself to a temporary directory and run an optional python setup script.  A pymakeself archive also includes a SHA256 checksum for integrity self-validation.
 
-The makeself.py script itself is used only to create the archive from a directory of files.  The resultant archive is actually a compressed (gzip or bzip2) TAR archive, with a small Python script stub at the beginning.  This small stub performs all the steps of extracting the files, running the embedded setup script, and cleaning up afterward.  The user only needs to "run" the archive to install its contents, i.e `python install-nice-app.py`.
+The makeself.py script itself is used only to create the archive from a directory of files.  The resulting archive is a compressed (gzip or bzip2) TAR archive, with a small Python script stub at the beginning.  This script performs all the steps of extracting the files, running the embedded setup script, and cleaning up afterward.  The user only needs to "run" the archive to install its contents, i.e `python install-nice-app.py`.
 
 This code is intended to be as portable as possible and should run on any system with an installation of python2.7 or later.  Other than Python, it does not rely on external utilities such as tar, gzip, bash etc.
-
-As of version 0.2.2, pymakeself has been tested on the following platforms:
-
-- Linux (all distributions)
-- FreeBSD
-- MacOS X
-
-Testing with these whould be done soon:
-
-- Windows7-10
 
 ## Install
 
@@ -53,7 +43,7 @@ The `args` beginning with `-` or `--` are optional.  The available options are:
 
 `--quiet, -q` : Do not print any messages other than errors.
 
-`--sshinstall host_addr` : Install on the specified host. Multiple OK. Use scp to copy the installer to the host and then use ssh to run the installer.
+`--sshinstall host_addr` : Install on the specified host (i.e. root@devbox1). Multiple OK. Uses scp to copy the installer to the host and then uses ssh to run the installer.
 
 `--tools, -t`  : Include installtools module.
 

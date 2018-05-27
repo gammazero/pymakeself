@@ -24,7 +24,7 @@ def main():
         license='http://www.opensource.org/licenses/mit-license.php',
         platforms=['unix', 'linux', 'osx', 'cygwin', 'win32'],
         keywords='archive installation tar',
-        classifiers=['Development Status :: 3 - Alpha',
+        classifiers=['Development Status :: 4 - Beta',
                      'Intended Audience :: Developers',
                      'License :: OSI Approved :: MIT License',
                      'Operating System :: POSIX',

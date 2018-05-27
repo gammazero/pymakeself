@@ -36,11 +36,11 @@ def install_on_hosts(script_path, hosts, conf_path):
         print('install script not found:', script_path, file=sys.stderr)
         return False
 
-    if conf_path:
+    if not conf_path:
         # Use default config file.
         conf_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                  'installhosts.conf')
-    elif not  os.path.isfile(conf_path):
+    elif not os.path.isfile(conf_path):
         print('configuration not found:', conf_path, file=sys.stderr)
         return False
 
@@ -71,8 +71,8 @@ def install_on_hosts(script_path, hosts, conf_path):
             print('===> installing on', host)
             try:
                 subprocess.check_call((
-                    'scp', script_path, 'root@%s:/tmp/' % (host,)))
-                subprocess.check_call(('ssh', '-t', '-l', 'root', host, cmd))
+                    'scp', script_path, '%s:/tmp/' % (host,)))
+                subprocess.check_call(('ssh', '-t', host, cmd))
             except subprocess.CalledProcessError:
                 fails.append(host)
         else:
@@ -91,7 +91,8 @@ def main():
     ap.add_argument('--config', '-c', dest='conf_file',
                     help='Config file path.')
     ap.add_argument('--install', action='append',
-                    help='Install on the specified host.  Multiple OK.')
+                    help='Install on the specified host, (i.e. root@devbox1). '
+                    'Multiple OK.')
     ap.add_argument('script', dest='package_script',
                     help='Package install script to run.')
     args = ap.parse_args()
