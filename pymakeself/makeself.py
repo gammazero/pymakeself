@@ -38,7 +38,7 @@ The package_name directory is then archived into a tar file:
         |         file1      |      |
         |         file2      |      |
         |         ...        |      | <archive>
-        +--------------------+      |
+        +--------------------+      | [optionally encrypt]
                                     |
         package_name.tar.gz <-------+
 
@@ -71,7 +71,7 @@ try:
 except ImportError:
     pass
 
-__version__ = '0.2.4'
+__version__ = '0.3.0'
 
 _exe_template = \
 b"""
@@ -125,6 +125,29 @@ def main():
         if label:
             print(label)
 
+        if encrypted:
+            # Write the aes tarfile to disk.
+            aes_path = os.path.join(tmp_dir, 'aes.tar.gz')
+            with open(aes_path, 'wb') as fp:
+                fp.write(base64.decodestring(AES_PKG_DATA))
+            # Unpack the aes tarfile then delete it.
+            with tarfile.open(aes_path) as t:
+                t.extractall(tmp_dir)
+            os.unlink(aes_path)
+
+            # import aes module and decrypt pkg tar file
+            sys.path.insert(0, tmp_dir)
+            from aes import aesutil
+            new_tar_name = tar_name.split('.aes', 1)[0]
+            new_tar_path = os.path.join(tmp_dir, new_tar_name)
+            with open(tar_path, 'rb') as etar:
+                with open(new_tar_path, 'wb') as dtar:
+                    err = aesutil.decrypt(None, etar, dtar)
+                    if err:
+                        raise RuntimeError(err)
+            os.unlink(tar_path)
+            tar_path = new_tar_path
+
         # Unpack the tarfile.
         with tarfile.open(tar_path) as t:
             t.extractall(tmp_dir)
@@ -174,7 +197,7 @@ def main():
 
 def make_package(content_dir, file_name, setup_script, script_args=(),
                  md5=True, compress='gz', follow=False, tools=False,
-                 quiet=False, label=None):
+                 quiet=False, label=None, password=None):
     """Create a self-extracting archive.
 
     Arguments:
@@ -188,6 +211,7 @@ def make_package(content_dir, file_name, setup_script, script_args=(),
     tools        -- Include installtools module if True
     quiet        -- Do not print any messages other than errors if True
     label        -- Text string describing the package
+    password     -- Password protect contents if not None
 
     Return:
     Path to self-extracting installer executable.
@@ -226,17 +250,18 @@ def make_package(content_dir, file_name, setup_script, script_args=(),
     pkg_path = os.path.join(tmp_dir, os.path.basename(file_name))
     try:
         _copy_package_files(pkg_path, content_dir, setup_script, in_content,
-                            tools)
-        tar_path, md5_sum = _archive_package(pkg_path, compress, md5)
+                            tools, password)
+        tar_path, md5_sum, aes_tar_path = _archive_package(pkg_path, compress,
+                                                           md5, password)
         return _pkg_to_exe(tar_path, file_name, setup_script, script_args,
-                           in_content, md5_sum, label)
+                           in_content, md5_sum, label, aes_tar_path)
     finally:
         # Always clean up temporary work directory.
         shutil.rmtree(tmp_dir, True)
 
 
 def _copy_package_files(pkg_path, install_src, setup_script, in_content,
-                        tools):
+                        tools, password):
     os.mkdir(pkg_path)
     install_dst = os.path.join(pkg_path, 'install_files')
 
@@ -273,8 +298,15 @@ def _copy_package_files(pkg_path, install_src, setup_script, in_content,
             shutil.copytree(os.path.join(parent_path, dir_name),
                             os.path.join(pkg_path, dir_name))
 
+    if password is not None:
+        dir_name = 'aes'
+        dst_dir = os.path.dirname(pkg_path)
+        parent_path = os.path.dirname(os.path.abspath(__file__))
+        shutil.copytree(os.path.join(parent_path, dir_name),
+                        os.path.join(dst_dir, dir_name))
 
-def _archive_package(pkg_path, compress, md5):
+
+def _archive_package(pkg_path, compress, md5, password):
     tar_path = pkg_path + '.tar.' + compress
 
     def reset(tarinfo):
@@ -291,11 +323,32 @@ def _archive_package(pkg_path, compress, md5):
         # Package path must only contain the directory to tar.
         tar.add(os.path.basename(pkg_path), filter=reset)
 
+    aes_tar_path = None
+    if password is not None:
+        # Package the aes module into its own tarfile.
+        aes_pkg_path = os.path.join(pkg_parent, 'aes')
+        aes_tar_path = aes_pkg_path + '.tar.gz'
+        print('===> packaging aes module:', os.path.basename(aes_tar_path))
+        with tarfile.open(aes_tar_path, 'w:gz') as tar:
+            # Package path must only contain the directory to tar.
+            tar.add(os.path.basename(aes_pkg_path), filter=reset)
+
+        # Encrypt the package tarfile.
+        from pymakeself.aes import aesutil
+        aes_path = tar_path+'.aes'
+        print('===> encrypting', os.path.basename(tar_path), "-->",
+              os.path.basename(aes_path))
+        with open(tar_path, 'rb') as tar_file:
+            with open(aes_path, 'wb') as aes_file:
+                aesutil.encrypt(password, tar_file, aes_file)
+        os.unlink(tar_path)
+        tar_path = aes_path
+
     os.chdir(orig_dir)
 
     md5_sum = None
     if md5:
-        # Import hashlib here, not at top of script, incase user cannot use
+        # Import hashlib here, not at top of script, in case user cannot use
         # hashlib on their platform and needs to omit the checksum.
         import hashlib
         BLOCKSIZE = 65536
@@ -310,11 +363,11 @@ def _archive_package(pkg_path, compress, md5):
     else:
         print('===> skipping MD5')
 
-    return tar_path, md5_sum
+    return tar_path, md5_sum, aes_tar_path
 
 
 def _pkg_to_exe(tar_path, file_name, setup_script, script_args, in_content,
-                md5_sum, label):
+                md5_sum, label, aes_tar_path):
     tar_name = os.path.basename(tar_path)
     exe_path = os.path.abspath(file_name) + '.py'
     if os.path.exists(exe_path):
@@ -344,6 +397,10 @@ def _pkg_to_exe(tar_path, file_name, setup_script, script_args, in_content,
             exe_f.write(("label = '%s'\n" % (label,)).encode(u8))
         else:
             exe_f.write(b"label = None\n")
+        if aes_tar_path:
+            exe_f.write(b"encrypted = True\n")
+        else:
+            exe_f.write(b"encrypted = False\n")
         exe_f.write(
             ("pkg_name = '%s'\n" % (tar_name.rsplit('.tar',1)[0],)).encode(u8))
         if setup_script:
@@ -358,11 +415,19 @@ def _pkg_to_exe(tar_path, file_name, setup_script, script_args, in_content,
         else:
             exe_f.write(b"script_name = None\n")
 
+        # If encrypted, write base64-encoded aes tar into executable script.
+        if aes_tar_path:
+            exe_f.write(b'\nAES_PKG_DATA = b"""\n')
+            with open(aes_tar_path, 'rb') as aes_pkg_f:
+                base64.encode(aes_pkg_f, exe_f)
+            exe_f.write(b'"""\n')
+
         # Write base64-encoded tar file into executable script.
         exe_f.write(b'\nPKG_DATA = b"""\n')
         with open(tar_path, 'rb') as pkg_f:
             base64.encode(pkg_f, exe_f)
         exe_f.write(b'"""\n\n')
+
         exe_f.write(b'if __name__ == "__main__":\n'
                     b'    sys.exit(main())\n')
 
@@ -402,6 +467,22 @@ def main(prg=None):
                     help='Follow symlinks in the archive.')
     ap.add_argument('--tools', '-t', action='store_true',
                     help='Include installtools module.')
+    ap.add_argument(
+        '--encrypt', '-e', action='store_true',
+        help='Encrypt the contents of the archive using a password which is'
+        'entered on the terminal in response to a prompt (this will not be '
+        'echoed.  The password prompt is repeated to save the user from typing'
+        'errors.')
+    ap.add_argument(
+        '--password', '-P',
+        help='Use specified password to encrypt archive.  THIS IS INSECURE!  '
+        'Many multi-user operating systems provide ways for any user to see '
+        'the current command line of any other user; even on stand-alone '
+        'systems there is always the threat of over-the-shoulder peeking.  '
+        'Storing the plaintext password as part of a command line in an '
+        'automated script is an even greater risk.  Whenever possible, use '
+        'the non-echoing, interactive prompt to enter passwords.  Specifying '
+        'a password implies --encrypt.')
     ap.add_argument('--quiet', '-q', action='store_true',
                     help='Do not print any messages other than errors.')
     ap.add_argument('--nomd5', action='store_false', dest='md5',
@@ -430,15 +511,28 @@ def main(prg=None):
     args = ap.parse_args()
 
     if args.setup_script:
-        if args.setup_script =='@accountutil':
+        if args.setup_script == '@accountutil':
             args.setup_script = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
                 'installtools', 'accountutil.py')
         elif os.path.dirname(args.setup_script):
             args.setup_script = os.path.expanduser(args.setup_script)
 
+    passwd = None
+    pw_str = None
+    if args.password:
+        args.encrypt = True
+        passwd = args.password
+        pw_str = '<specified, not shown>'
+
+    if args.encrypt:
+        if passwd is None:
+            passwd = ""
+
     print('compress:', args.compress)
     print('md5:', args.md5)
+    print('encrypt:', args.encrypt)
+    print('password:', pw_str)
     print('quiet:', args.quiet)
     print('tools:', args.tools)
     print('follow:', args.follow)
@@ -461,7 +555,7 @@ def main(prg=None):
         exe_path = make_package(
             args.content, args.installer_name, args.setup_script,
             args.setup_args, args.md5, args.compress, args.follow, args.tools,
-            args.quiet, args.label)
+            args.quiet, args.label, passwd)
     except Exception as ex:
         print(ex, file=sys.stderr)
         return 1
