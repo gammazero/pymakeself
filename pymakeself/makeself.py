@@ -71,7 +71,7 @@ try:
 except ImportError:
     pass
 
-__version__ = '0.3.1'
+__version__ = '0.3.2'
 
 _exe_template = \
 b"""
@@ -83,11 +83,15 @@ import tempfile
 import os
 import sys
 import argparse
+import datetime
 
 
 def main():
     ap = argparse.ArgumentParser(description='Self-extracting install script')
-    ap.add_argument('--check', action='store_true', help='Check hash and exit')
+    ap.add_argument('--check', action='store_true',
+                    help='Check the integrity of the archive.')
+    ap.add_argument('--list', action='store_true',
+                    help='List the files in the archive')
     ap.add_argument('--extract', action='store_true',
                     help='Extract package contents and exit')
     args = ap.parse_args()
@@ -103,21 +107,21 @@ def main():
         with open(tar_path, 'wb') as fp:
             fp.write(base64.decodestring(PKG_DATA))
 
-        if md5_sum:
+        if sha256_sum:
             import hashlib
             BLOCKSIZE = 65536
-            md5 = hashlib.md5()
+            sha256 = hashlib.sha256()
             with open(tar_path, 'rb') as tar_file:
                 buf = tar_file.read(BLOCKSIZE)
                 while buf:
-                    md5.update(buf)
+                    sha256.update(buf)
                     buf = tar_file.read(BLOCKSIZE)
-            if md5_sum != md5.hexdigest():
-                raise RuntimeError('MD5 checksum mismatch.  The file may be '
-                                   'corrupted or incomplete.')
-            print('===> MD5 is good')
+            if sha256_sum != sha256.hexdigest():
+                raise RuntimeError('SHA256 checksum mismatch.  The file may '
+                                   'be corrupted or incomplete.')
+            print('===> SHA256 is good')
         else:
-            print('===> MD5 not checked')
+            print('===> SHA256 not checked')
 
         if args.check:
             return 0
@@ -147,6 +151,50 @@ def main():
                         raise RuntimeError(err)
             os.unlink(tar_path)
             tar_path = new_tar_path
+
+        # List tarfile contents.
+        if args.list:
+            with tarfile.open(tar_path) as t:
+                max_sz = 0
+                n = 0
+                for ti in t.getmembers():
+                    if n < 2:
+                        n += 1
+                        continue
+                    sz = "%d" % ti.size
+                    if len(sz) > max_sz:
+                        max_sz = len(sz)
+
+                bits = ['-'] * 10
+                j = len(bits) - 1
+                fmt = '%%s %%%dd %%s %%s' % max_sz
+                n = 0
+                for ti in t.getmembers():
+                    if n < 2:
+                        n += 1
+                        continue
+                    mt = datetime.datetime.fromtimestamp(ti.mtime)
+                    mts = mt.strftime("%b %d %H:%M")
+                    name = ti.name.split('install_files/', 1)[-1]
+                    i = 0
+                    while i < len(bits) - 1:
+                        bits[j-i] = 'x' if (ti.mode >> i) & 0x01 else '-'
+                        i += 1
+                        bits[j-i] = 'w' if (ti.mode >> i) & 0x01 else '-'
+                        i += 1
+                        bits[j-i] = 'r' if (ti.mode >> i) & 0x01 else '-'
+                        i += 1
+
+                    if ti.isfile(): bits[0]= '-'
+                    elif ti.isdir(): bits[0] = 'd'
+                    elif ti.issym(): bits[0] = 'l'
+                    elif ti.islnk(): bits[0] = 'h'
+                    elif ti.ischr(): bits[0] = 'c'
+                    elif ti.isblk(): bits[0] = 'b'
+                    elif ti.isfifo(): bits[0] = 'p'
+                    else: bits[0] = '-'
+                    print(fmt % (''.join(bits), ti.size, mts, name))
+            return 0
 
         # Unpack the tarfile.
         with tarfile.open(tar_path) as t:
@@ -196,7 +244,7 @@ def main():
 
 
 def make_package(content_dir, file_name, setup_script, script_args=(),
-                 md5=True, compress='gz', follow=False, tools=False,
+                 sha256=True, compress='gz', follow=False, tools=False,
                  quiet=False, label=None, password=None):
     """Create a self-extracting archive.
 
@@ -205,7 +253,7 @@ def make_package(content_dir, file_name, setup_script, script_args=(),
     file_name    -- Name for the executable that is created
     setup_script -- Python script executed from within extracted content
     script_args  -- Arguments to pass to setup script when run
-    md5          -- Enable (True) or disable (False) MD5
+    sha256       -- Enable (True) or disable (False) SHA256
     compress     -- Type of compression ('gz', 'bz2', 'xz')
     follow       -- Follow symlinks in the archive if True
     tools        -- Include installtools module if True
@@ -251,10 +299,10 @@ def make_package(content_dir, file_name, setup_script, script_args=(),
     try:
         _copy_package_files(pkg_path, content_dir, setup_script, in_content,
                             tools, password)
-        tar_path, md5_sum, aes_tar_path = _archive_package(pkg_path, compress,
-                                                           md5, password)
+        tar_path, sha256_sum, aes_tar_path = _archive_package(
+            pkg_path, compress, sha256, password)
         return _pkg_to_exe(tar_path, file_name, setup_script, script_args,
-                           in_content, md5_sum, label, aes_tar_path)
+                           in_content, sha256_sum, label, aes_tar_path)
     finally:
         # Always clean up temporary work directory.
         shutil.rmtree(tmp_dir, True)
@@ -306,7 +354,7 @@ def _copy_package_files(pkg_path, install_src, setup_script, in_content,
                         os.path.join(dst_dir, dir_name))
 
 
-def _archive_package(pkg_path, compress, md5, password):
+def _archive_package(pkg_path, compress, sha256, password):
     tar_path = pkg_path + '.tar.' + compress
 
     def reset(tarinfo):
@@ -346,28 +394,28 @@ def _archive_package(pkg_path, compress, md5, password):
 
     os.chdir(orig_dir)
 
-    md5_sum = None
-    if md5:
+    sha256_sum = None
+    if sha256:
         # Import hashlib here, not at top of script, in case user cannot use
         # hashlib on their platform and needs to omit the checksum.
         import hashlib
         BLOCKSIZE = 65536
-        md5 = hashlib.md5()
+        sha256 = hashlib.sha256()
         with open(tar_path, 'rb') as tar_file:
             buf = tar_file.read(BLOCKSIZE)
             while buf:
-                md5.update(buf)
+                sha256.update(buf)
                 buf = tar_file.read(BLOCKSIZE)
-        md5_sum = md5.hexdigest()
-        print('===> MD5 (%s) = %s' % (os.path.basename(tar_path), md5_sum))
+        sha256_sum = sha256.hexdigest()
+        print('===> SHA256 (%s) = %s' % (os.path.basename(tar_path), sha256_sum))
     else:
-        print('===> skipping MD5')
+        print('===> skipping SHA256')
 
-    return tar_path, md5_sum, aes_tar_path
+    return tar_path, sha256_sum, aes_tar_path
 
 
 def _pkg_to_exe(tar_path, file_name, setup_script, script_args, in_content,
-                md5_sum, label, aes_tar_path):
+                sha256_sum, label, aes_tar_path):
     tar_name = os.path.basename(tar_path)
     exe_path = os.path.abspath(file_name) + '.py'
     if os.path.exists(exe_path):
@@ -375,7 +423,6 @@ def _pkg_to_exe(tar_path, file_name, setup_script, script_args, in_content,
               file=sys.stderr)
         os.unlink(exe_path)
 
-    u8 = 'utf-8'
     print('===> writing executable:', os.path.relpath(exe_path))
     with open(exe_path, 'wb') as exe_f:
         # Write interpreter invocation line.
@@ -387,14 +434,13 @@ def _pkg_to_exe(tar_path, file_name, setup_script, script_args, in_content,
         exe_f.write(_exe_template)
 
         # Write data about install module, tar file, and package into script.
-        s = "\ntar_name = '%s'\n" % (tar_name,)
-        exe_f.write(s.encode(u8))
-        if md5_sum:
-            exe_f.write(("md5_sum = '%s'\n" % (md5_sum,)).encode(u8))
+        exe_f.write(("\ntar_name = '%s'\n" % (tar_name,)).encode())
+        if sha256_sum:
+            exe_f.write(("sha256_sum = '%s'\n" % (sha256_sum,)).encode())
         else:
-            exe_f.write(b"md5_sum = None\n")
+            exe_f.write(b"sha256_sum = None\n")
         if label:
-            exe_f.write(("label = '%s'\n" % (label,)).encode(u8))
+            exe_f.write(("label = '%s'\n" % (label,)).encode())
         else:
             exe_f.write(b"label = None\n")
         if aes_tar_path:
@@ -402,16 +448,16 @@ def _pkg_to_exe(tar_path, file_name, setup_script, script_args, in_content,
         else:
             exe_f.write(b"encrypted = False\n")
         exe_f.write(
-            ("pkg_name = '%s'\n" % (tar_name.rsplit('.tar',1)[0],)).encode(u8))
+            ("pkg_name = '%s'\n" % (tar_name.rsplit('.tar',1)[0],)).encode())
         if setup_script:
             script_name = os.path.basename(setup_script)
-            exe_f.write(("script_name = '%s'\n" % (script_name,)).encode(u8))
+            exe_f.write(("script_name = '%s'\n" % (script_name,)).encode())
             if in_content:
                 exe_f.write(b"in_content = True\n")
             else:
                 exe_f.write(b"in_content = False\n")
             exe_f.write(
-                ('script_args = %s\n' %(repr(tuple(script_args)),)).encode(u8))
+                ('script_args = %s\n' %(repr(tuple(script_args)),)).encode())
         else:
             exe_f.write(b"script_name = None\n")
 
@@ -451,45 +497,45 @@ def main(prg=None):
         epilog='home page: https://github.com/gammazero/pymakeself')
     ap.set_defaults(compress='gz')
 
-    ap.add_argument('--label', metavar='text',
-                    help='Arbitrary text string describing the package. It '
-                    'will be displayed while extracting the files.')
-    ap.add_argument('--gzip', action='store_const', const='gz',
-                    dest='compress', help='Compress using gzip (default).')
     ap.add_argument('--bzip2', action='store_const', const='bz2',
                     dest='compress',
                     help='Compress using bzip2 instead of gzip.')
-    ap.add_argument('--follow', action='store_true',
-                    help='Follow symlinks in the archive.')
     ap.add_argument(
         '--encrypt', '-e', action='store_true',
-        help='Encrypt the contents of the archive using a password which is'
+        help='Encrypt the contents of the archive using a password which is '
         'entered on the terminal in response to a prompt (this will not be '
-        'echoed.  The password prompt is repeated to save the user from typing'
-        'errors.')
+        'echoed).')
+    ap.add_argument('--follow', action='store_true',
+                    help='Follow symlinks in the archive.')
+    ap.add_argument('--gzip', action='store_const', const='gz',
+                    dest='compress', help='Compress using gzip (default).')
+    ap.add_argument('--label', metavar='text',
+                    help='Arbitrary text string describing the package. It '
+                    'will be displayed while extracting the files.')
+    ap.add_argument('--nosha256', action='store_false', dest='sha256',
+                    help='Do not calculate SHA256 checksum for archive.')
     ap.add_argument(
         '--password', '-P',
-        help='Use specified password to encrypt archive.  THIS IS INSECURE!  '
+        help='Use specified password to encrypt archive. THIS IS INSECURE!  '
         'Many multi-user operating systems provide ways for any user to see '
-        'the current command line of any other user; even on stand-alone '
-        'systems there is always the threat of over-the-shoulder peeking.  '
-        'Storing the plaintext password as part of a command line in an '
-        'automated script is an even greater risk.  Whenever possible, use '
-        'the non-echoing, interactive prompt to enter passwords.  Specifying '
-        'a password implies --encrypt.')
-    if 'lzma' in dir():
-        ap.add_argument('--xz', action='store_const', const='xz',
-                        dest='compress',
-                        help='Compress using xz instead of gzip.')
-    ap.add_argument('--tools', '-t', action='store_true',
-                    help='Include installtools module.')
+        'the current command line of any other user. Storing the plaintext '
+        'password as part of a command line in an automated script is an even '
+        'greater risk.  Whenever possible, use the non-echoing, interactive '
+        'prompt to enter passwords.  Specifying a password implies --encrypt.')
     ap.add_argument('--quiet', '-q', action='store_true',
                     help='Do not print any messages other than errors.')
-    ap.add_argument('--nomd5', action='store_false', dest='md5',
-                    help='Do not calculate MD5 for archive.')
-    ap.add_argument('--install', action='append', metavar='host_addr',
-                    help='Install on the specified host.  Multiple OK.')
+    ap.add_argument(
+        '--sshinstall', action='append', metavar='host_addr',
+        help='Install on the specified host. Multiple OK. Use scp to copy the '
+        'installer to the host and then use ssh to run the installer.')
+    ap.add_argument('--tools', '-t', action='store_true',
+                    help='Include installtools module.')
     ap.add_argument('--version', action='version', version=__version__)
+    if 'lzma' in dir():
+        ap.add_argument(
+            '--xz', action='store_const', const='xz', dest='compress',
+            help='Compress using xz instead of gzip. This requires Python3.x '
+            'for both creation and extraction.')
     ap.add_argument('content', help='Directory containing files to '
                     'archive in installer.')
     ap.add_argument('installer_name',
@@ -530,7 +576,7 @@ def main(prg=None):
             passwd = ""
 
     print('compress:', args.compress)
-    print('md5:', args.md5)
+    print('sha256:', args.sha256)
     print('encrypt:', args.encrypt)
     print('password:', pw_str)
     print('quiet:', args.quiet)
@@ -554,13 +600,13 @@ def main(prg=None):
     try:
         exe_path = make_package(
             args.content, args.installer_name, args.setup_script,
-            args.setup_args, args.md5, args.compress, args.follow, args.tools,
-            args.quiet, args.label, passwd)
+            args.setup_args, args.sha256, args.compress, args.follow,
+            args.tools, args.quiet, args.label, passwd)
     except Exception as ex:
         print(ex, file=sys.stderr)
         return 1
 
-    if args.install:
+    if args.sshinstall:
         # Create temporary conf file.
         from . import installhosts
         if not installhosts.install_on_hosts(exe_path, args.install, None):
