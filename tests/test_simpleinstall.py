@@ -38,10 +38,11 @@ class TestSimpleInstall(object):
         """Test creating sefl-extracting installer."""
         label = 'This is a test of pymakeself.'
         compress='gz'
+        password = None
         follow = False
         tools = False
         quiet = False
-        md5 = True
+        sha256 = True
         install = []
         content = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), 'content')
@@ -50,15 +51,28 @@ class TestSimpleInstall(object):
 
         exe_path = makeself.make_package(
             content, self.installer_name, setup_script, self.setup_args,
-            md5, compress, follow, tools, quiet, label)
+            sha256, compress, follow, tools, quiet, label, password)
 
         # Check that installer was created.
         assert os.path.isfile(exe_path)
         print('Created installer:', exe_path)
 
     def test_check_installer(self):
-        """Test MD5 check."""
+        """Test SHA256 check."""
         subprocess.check_call(('python', self.installer_name, '--check'))
+
+    def test_list_installer(self):
+        """Test files list."""
+        files = []
+        o = subprocess.check_output(('python', self.installer_name, '--list'))
+        for line in o.split('\n'):
+            if line and line[0] == '-':
+                files.append(line.split()[-1])
+        assert len(files) == 4
+        assert 'foo.txt' in files
+        assert 'bar.txt' in files
+        assert 'baz.txt' in files
+        assert 'install.py' in files
 
     def test_run_installer(self):
         """Test running installer."""
@@ -66,7 +80,7 @@ class TestSimpleInstall(object):
         subprocess.check_call(('python', self.installer_name))
         print('Ran', self.installer_name)
 
-        # Make sure all the expected file are in the install dir.
+        # Make sure all the expected files are in the install dir.
         assert os.path.isdir(self.dst_dir)
         for fname in ('foo.txt', 'bar.txt', 'baz.txt'):
             assert os.path.isfile(os.path.join(self.dst_dir, fname))
