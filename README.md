@@ -35,9 +35,15 @@ pymakeself [args] content_dir file_name setup_script [script_args]
 ```
 The `args` beginning with `-` or `--` are optional.  The available options are:
 
-`--version` : Prints the version number on stdout, then exits immediately
-
 `--help, -h` : Print out this help message.
+
+`--label text` : Arbitrary text string describing the package. It will be displayed while extracting the files. 
+
+`--follow` : Follow the symbolic links inside of the archive directory, i.e. store the files that are being pointed to instead of the links themselves.
+
+`--encrypt, -e` :  Encrypt the contents of the archive using a password which isentered on the terminal in response to a prompt (this will not be echoed. The password prompt is repeated to save the user from typingerrors.
+
+`--password, -P` : Use specified password to encrypt archive. THIS IS INSECURE! Many multi-user operating systems provide ways for any user to see the current command line of any other user. Storing the plaintext password as part of a command line in an automated script is an even greater risk. Whenever possible, use the non-echoing, interactive prompt to enter passwords. Specifying a password implies --encrypt.
 
 `--quiet, -q` : Do not print any messages other than errors.
 
@@ -49,9 +55,9 @@ The `args` beginning with `-` or `--` are optional.  The available options are:
 
 `--xz` : Compress using xz instead of gzip.  This requires Python3.x for both creation and extraction.
 
-`--follow` : Follow the symbolic links inside of the archive directory, i.e. store the files that are being pointed to instead of the links themselves.
-
 `--nomd5` : Disable the creation of a MD5 checksum for the archive.  This speeds up the extraction process if integrity checking is not necessary.
+
+`--version` : Prints the version number on stdout, then exits immediately
 
 `content_dir` is the name of the directory that contains the files to be archived.
 

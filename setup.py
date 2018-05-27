@@ -5,6 +5,9 @@ except ImportError:
 
 from pymakeself.makeself import __version__
 
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
 # This is not zip_safe because the installer creation logic needs access to the
 # raw source files in installtools/
 #
@@ -16,7 +19,8 @@ def main():
         author_email='gillis.andrewj@gmail.com',
         url='https://github.com/gammazero/pymakeself',
         description='pymakeself: make self-extracting archives',
-        long_description = open('README.md').read(),
+        long_description=long_description,
+        long_description_content_type='text/markdown',
         license='http://www.opensource.org/licenses/mit-license.php',
         platforms=['unix', 'linux', 'osx', 'cygwin', 'win32'],
         keywords='archive installation tar',

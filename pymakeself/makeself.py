@@ -71,7 +71,7 @@ try:
 except ImportError:
     pass
 
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 
 _exe_template = \
 b"""
@@ -459,14 +459,8 @@ def main(prg=None):
     ap.add_argument('--bzip2', action='store_const', const='bz2',
                     dest='compress',
                     help='Compress using bzip2 instead of gzip.')
-    if 'lzma' in dir():
-        ap.add_argument('--xz', action='store_const', const='xz',
-                        dest='compress',
-                        help='Compress using xz instead of gzip.')
     ap.add_argument('--follow', action='store_true',
                     help='Follow symlinks in the archive.')
-    ap.add_argument('--tools', '-t', action='store_true',
-                    help='Include installtools module.')
     ap.add_argument(
         '--encrypt', '-e', action='store_true',
         help='Encrypt the contents of the archive using a password which is'
@@ -483,6 +477,12 @@ def main(prg=None):
         'automated script is an even greater risk.  Whenever possible, use '
         'the non-echoing, interactive prompt to enter passwords.  Specifying '
         'a password implies --encrypt.')
+    if 'lzma' in dir():
+        ap.add_argument('--xz', action='store_const', const='xz',
+                        dest='compress',
+                        help='Compress using xz instead of gzip.')
+    ap.add_argument('--tools', '-t', action='store_true',
+                    help='Include installtools module.')
     ap.add_argument('--quiet', '-q', action='store_true',
                     help='Do not print any messages other than errors.')
     ap.add_argument('--nomd5', action='store_false', dest='md5',
