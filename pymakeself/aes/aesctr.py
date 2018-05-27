@@ -14,22 +14,15 @@ furnished to do so, subject to the following conditions:
 """
 import copy
 import struct
-import sys
 
 
 def _compact_word(word):
     return (word[0] << 24) | (word[1] << 16) | (word[2] << 8) | word[3]
 
 
-if sys.hexversion < 0x03000000:  # Python 2
-
-    def _bytes_to_string(binary):
-        return str(bytearray(binary))
-
-    def _string_to_bytes(text):
-        return list(bytearray(text))
-
-else:  # Python 3
+try:
+    xrange
+except Exception:  # Python 3
     xrange = range
 
     def _bytes_to_string(binary):
@@ -38,7 +31,15 @@ else:  # Python 3
     def _string_to_bytes(text):
         if isinstance(text, str):
             return text.encode()
-        return list(text)
+        return text
+
+else:  # Python 2
+
+    def _bytes_to_string(binary):
+        return str(bytearray(binary))
+
+    def _string_to_bytes(text):
+        return list(bytearray(text))
 
 
 class AESCTRMode(object):
