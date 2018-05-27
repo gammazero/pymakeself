@@ -4,7 +4,7 @@ Make self-extracting archives with Python, on most operating systems.
 
 ## Overview
 
-pymakeself is a Python script that generates a self-extractable tar.gz archive from a directory.  The resulting file appears as a Python script, and can be launched as is.  The archive will then uncompress itself to a temporary directory and run an optional python setup script.  pymakeself archives also include a MD5 checksum for integrity self-validation.
+pymakeself is a Python script that generates a self-extractable tar.gz archive from a directory.  The resulting file appears as a Python script, and can be launched as is.  The archive will then uncompress itself to a temporary directory and run an optional python setup script.  pymakeself archives also include a SHA256 checksum for integrity self-validation.
 
 The makeself.py script itself is used only to create the archive from a directory of files.  The resultant archive is actually a compressed (gzip or bzip2) TAR archive, with a small Python script stub at the beginning.  This small stub performs all the steps of extracting the files, running the embedded setup script, and cleaning up afterward.  The user only needs to "run" the archive to install its contents, i.e `python install-nice-app.py`.
 
@@ -37,27 +37,29 @@ The `args` beginning with `-` or `--` are optional.  The available options are:
 
 `--help, -h` : Print out this help message.
 
-`--label text` : Arbitrary text string describing the package. It will be displayed while extracting the files. 
+`--bzip2` : Use bzip2 instead of gzip for better compression.
+
+`--encrypt, -e` :  Encrypt the contents of the archive using a password which is entered on the terminal in response to a prompt (this will not be echoed). The password prompt is repeated to save the user from typing errors.
 
 `--follow` : Follow the symbolic links inside of the archive directory, i.e. store the files that are being pointed to instead of the links themselves.
 
-`--encrypt, -e` :  Encrypt the contents of the archive using a password which isentered on the terminal in response to a prompt (this will not be echoed. The password prompt is repeated to save the user from typingerrors.
+`--gzip` : Use gzip for compression (is the default)
+
+`--label text` : Arbitrary text string describing the package. It will be displayed while extracting the files. 
+
+`--nosha256` : Disable the creation of a SHA256 checksum for the archive.  This speeds up the extraction process if integrity checking is not necessary.
 
 `--password, -P` : Use specified password to encrypt archive. THIS IS INSECURE! Many multi-user operating systems provide ways for any user to see the current command line of any other user. Storing the plaintext password as part of a command line in an automated script is an even greater risk. Whenever possible, use the non-echoing, interactive prompt to enter passwords. Specifying a password implies --encrypt.
 
 `--quiet, -q` : Do not print any messages other than errors.
 
+`--sshinstall host_addr` : Install on the specified host. Multiple OK. Use scp to copy the installer to the host and then use ssh to run the installer.
+
 `--tools, -t`  : Include installtools module.
 
-`--gzip` : Use gzip for compression (is the default)
-
-`--bzip2` : Use bzip2 instead of gzip for better compression.
+`--version` : Prints the version number on stdout, then exits immediately
 
 `--xz` : Compress using xz instead of gzip.  This requires Python3.x for both creation and extraction.
-
-`--nomd5` : Disable the creation of a MD5 checksum for the archive.  This speeds up the extraction process if integrity checking is not necessary.
-
-`--version` : Prints the version number on stdout, then exits immediately
 
 `content_dir` is the name of the directory that contains the files to be archived.
 
@@ -77,7 +79,9 @@ pymakeself --label "PyMakeSelf by Andrew Gillis" pymakeself install_pymakeself s
 
 Archives generated with pymakeself can be passed the following arguments:
 
-`--check` : Check the archive's MD5 sum and exit.
+`--check` : Check the integrity of the archive by verifying the embedded SHA256 checksum.  Does not extract the archive.
+
+`--list` : List the files in the archive.
 
 `--extract` : Extract package contents to temporary directory and exit.
 
@@ -127,4 +131,6 @@ To see documentation on `make_package()` run: `pydoc pymakeself.makeself.make_pa
 
 ## Acknowledgments
 
-This script was inspired by, and modeled after, makeself by Stephane Peter.
+This script was inspired by, and modeled after, [makeself](https://makeself.io/) by Stephane Peter.
+
+Pure-Python AES cryptography adapted from [pyaes](https://github.com/ricmoo/pyaes) by Richard Moore
