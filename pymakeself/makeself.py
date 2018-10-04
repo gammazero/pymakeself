@@ -71,7 +71,7 @@ try:
 except ImportError:
     pass
 
-__version__ = '0.3.3'
+__version__ = '0.3.4'
 
 _exe_template = \
 b"""
@@ -226,7 +226,7 @@ def main():
                 # it was not located in archive dir.
                 os.chdir(arch_path)
 
-            exec(code, {'__name__': '__main__'})
+            exec(code, {'__name__': '__main__', '__file__': script_name})
             # *** DO NO EXPECT EXECUTION PAST THIS POINT ***
             # setup script may call sys.exit()
     except RuntimeError as e:
@@ -315,7 +315,7 @@ def _copy_package_files(pkg_path, install_src, setup_script, in_content,
 
     print('===> packaging files from', install_src)
     # Copy the install files.
-    ignores = shutil.ignore_patterns('*.py?', '*~', '.#*', '.ssh')
+    ignores = shutil.ignore_patterns('*~', '.#*', '.ssh')
     shutil.copytree(install_src, install_dst, ignore=ignores)
 
     # Copy .ssh/authorized_keys if one exists in source.

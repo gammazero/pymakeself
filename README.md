@@ -92,7 +92,7 @@ pymakeself ~/ajg_dot_files create_ajg @accountutil \
 ```
 Specifying `@accountutil` as the setup script tells pymakeself to use the UNIX account creation tool, that is included with the pymakeself package.
 
-Notice that the `-i` argument to accountutil specifies `./` instead of `ajg_dot_files`.  This is because the setup file is always run from within the archive directory.
+Notice that the `-i` argument to accountutil (the directory with files to install) specifies `./` instead of `ajg_dot_files`.  This is because the setup file is always run from within the archive directory, so the install directory is the current directory.
 
 ## Library
 
