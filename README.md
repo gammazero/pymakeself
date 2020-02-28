@@ -21,7 +21,7 @@ sudo pip install pymakeself
 The pymakeself package installs the `pymakeself` command.  This is the same as running `python -m pymakeself`, and has the following syntax:
 
 ```
-pymakeself [args] content_dir file_name setup_script [script_args]
+pymakeself [args] content_dir file_name setup_script [setup_args]
 ```
 The `args` beginning with `-` or `--` are optional.  The available options are:
 
@@ -57,6 +57,8 @@ The `args` beginning with `-` or `--` are optional.  The available options are:
 
 `setup_script` is a Python script to be executed from within the extracted content directory, that is run using the same Python interpreter used to run the installer.  If the script is already located inside the content directory then only specify the name of the script.  Otherwise, provide a relative or absolute path to the script so that it can be copied into the installer archive.  The special value `@accountutil` tells pymakeself to use the Unix [account creation tool](https://github.com/gammazero/pymakeself/blob/master/pymakeself/installtools/accountutil.py), included in the pymakeself package, as the `setup_script`.
 
+`setup_args` are optional arguments to pass into Python setup script when run during execution of the installer.  Additional arguments can also be specified on the command line when running the installer.
+
 Here is an example, assuming the user has a package image stored in a `/home/jane/mysoft`, and wants to generate a self-extracting package named install_mysoft.py, which will launch the `setup.py` script initially stored in `/home/jane/mysoft`:
 ```
 pymakeself.py --label "Jane's Nice Software Package" /home/jane/mysoft install_mysoft setup.py
@@ -67,7 +69,7 @@ Here is how I created a `install_pymakeself.py` installer that installs the pyma
 pymakeself --label "PyMakeSelf by Andrew Gillis" pymakeself install_pymakeself setup.py install
 ```
 
-Archives generated with pymakeself can be passed the following arguments:
+Self-extracting archives generated with pymakeself can be passed the following arguments:
 
 `--check` : Check the integrity of the archive by verifying the embedded SHA256 checksum.  Does not extract the archive.
 
@@ -75,16 +77,23 @@ Archives generated with pymakeself can be passed the following arguments:
 
 `--extract` : Extract package contents to temporary directory and exit.
 
-Any subsequent arguments to the archive will be passed as additional arguments to the embedded command.
+Any other command line arguments given to the self-extracting archive are passed as arguments to the embedded setup script.
 
 ## Examples
 
+### Installer with Setup Script
 Create an installer, named install_stuff, that runs setup.py:
 
 ```
 pymakeself /storage/myfiles install_stuff setup.py
 ```
 
+Run the installer to install the content and run the setup.py script.  Notice that additional arguments are passed to the setup script at install time:
+```
+python install_stuff.py --logdir /var/log/mystuff
+```
+
+### Install User Account
 Create an installer that runs the `accountutil.py` tool (one of the modules in the pymakeself installtools) as the setup script, to create the "ajg" user account:
 ```
 pymakeself ~/ajg_dot_files create_ajg @accountutil \

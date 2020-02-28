@@ -71,7 +71,7 @@ try:
 except ImportError:
     pass
 
-__version__ = '0.3.4'
+__version__ = '0.3.5'
 
 _exe_template = \
 b"""
@@ -94,6 +94,8 @@ def main():
                     help='List the files in the archive')
     ap.add_argument('--extract', action='store_true',
                     help='Extract package contents and exit')
+    ap.add_argument('args', nargs=argparse.REMAINDER,
+                    help='Arguments to pass to setup script')
     args = ap.parse_args()
 
     tmp_dir = None
@@ -218,6 +220,8 @@ def main():
 
             sys.argv = [script_name]
             sys.argv.extend(script_args)
+            if args.args:
+                sys.argv.extend(args.args)
             with open(script_name) as f:
                 code = compile(f.read(), script_name, 'exec')
 

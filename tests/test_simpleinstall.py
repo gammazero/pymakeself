@@ -64,7 +64,11 @@ class TestSimpleInstall(object):
     def test_list_installer(self):
         """Test files list."""
         files = []
-        o = subprocess.check_output(('python', self.installer_name, '--list'))
+        kwargs = {}
+        if sys.version_info.major >= 3:
+            kwargs = {"text": True}
+        o = subprocess.check_output(('python', self.installer_name, '--list'),
+                                    **kwargs)
         for line in o.split('\n'):
             if line and line[0] == '-':
                 files.append(line.split()[-1])
@@ -77,7 +81,8 @@ class TestSimpleInstall(object):
     def test_run_installer(self):
         """Test running installer."""
         # Run the installer.
-        subprocess.check_call(('python', self.installer_name))
+        subprocess.check_call(('python', self.installer_name,
+                               "hello", "world", "--xyz"))
         print('Ran', self.installer_name)
 
         # Make sure all the expected files are in the install dir.
@@ -101,5 +106,5 @@ class TestSimpleInstall(object):
             params_data = fin.read().strip()
         assert params_data
         params = params_data.split(',')
-        assert params == self.setup_args
+        assert params == self.setup_args + ["hello", "world", "--xyz"]
         print('Setup arguments were correctly supplied to installer.')
