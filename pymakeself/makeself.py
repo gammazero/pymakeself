@@ -138,7 +138,7 @@ def main():
             # Write the aes tarfile to disk.
             aes_path = os.path.join(tmp_dir, 'aes.tar.gz')
             with open(aes_path, 'wb') as fp:
-                if sys.verion_info >= (3, 1) :
+                if sys.version_info >= (3, 1) :
                     fp.write(base64.decodebytes(AES_PKG_DATA))
                 else :
                     fp.write(base64.decodestring(AES_PKG_DATA))
