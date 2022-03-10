@@ -107,7 +107,10 @@ def main():
         # Write the tarfile into the temporary directory
         tar_path = os.path.join(tmp_dir, tar_name)
         with open(tar_path, 'wb') as fp:
-            fp.write(base64.decodestring(PKG_DATA))
+            if sys.version_info >= (3, 1) :
+                fp.write(base64.decodebytes(PKG_DATA))
+            else :
+                fp.write(base64.decodestring(PKG_DATA))
 
         if sha256_sum:
             import hashlib
@@ -135,7 +138,10 @@ def main():
             # Write the aes tarfile to disk.
             aes_path = os.path.join(tmp_dir, 'aes.tar.gz')
             with open(aes_path, 'wb') as fp:
-                fp.write(base64.decodestring(AES_PKG_DATA))
+                if sys.version_info >= (3, 1) :
+                    fp.write(base64.decodebytes(AES_PKG_DATA))
+                else :
+                    fp.write(base64.decodestring(AES_PKG_DATA))
             # Unpack the aes tarfile then delete it.
             with tarfile.open(aes_path) as t:
                 t.extractall(tmp_dir)
