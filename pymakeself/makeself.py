@@ -2,12 +2,12 @@
 Create an executable (self-extracting) installer Python script.
 
 The installer contains a copy of the contents of a specified directory, and it
-contains the specified install script.  When the installer is run, it extracts
+contains the specified install script. When the installer is run, it extracts
 itself and runs the install script.
 
 The installer is created by first creating a directory, package_name, that
-contains a subdirectory called 'install_files'.  The 'install_files'
-subdirectory contains a copy of the contents of the specified content_dir.  If
+contains a subdirectory called 'install_files'. The 'install_files'
+subdirectory contains a copy of the contents of the specified content_dir. If
 a setup_script is specified, then that setup_script is also copied into the
 package_name dir, along with the installtools if those are requested.
 
@@ -57,8 +57,6 @@ This install script can be run on another machine to extract the archive and
 run the setup_script script inside it.
 
 """
-from __future__ import print_function
-from __future__ import absolute_import
 import os
 import sys
 import shutil
@@ -66,16 +64,11 @@ import tarfile
 import tempfile
 import stat
 import base64
-try:
-    import lzma
-except ImportError:
-    pass
 
-__version__ = '0.3.5'
+__version__ = '0.4.0'
 
 _exe_template = \
 b"""
-from __future__ import print_function
 import base64
 import tarfile
 import shutil
@@ -84,7 +77,6 @@ import os
 import sys
 import argparse
 import datetime
-
 
 def main():
     ap = argparse.ArgumentParser(description='Self-extracting install script')
@@ -107,10 +99,7 @@ def main():
         # Write the tarfile into the temporary directory
         tar_path = os.path.join(tmp_dir, tar_name)
         with open(tar_path, 'wb') as fp:
-            if sys.version_info >= (3, 1) :
-                fp.write(base64.decodebytes(PKG_DATA))
-            else :
-                fp.write(base64.decodestring(PKG_DATA))
+            fp.write(base64.decodebytes(PKG_DATA))
 
         if sha256_sum:
             import hashlib
@@ -138,13 +127,11 @@ def main():
             # Write the aes tarfile to disk.
             aes_path = os.path.join(tmp_dir, 'aes.tar.gz')
             with open(aes_path, 'wb') as fp:
-                if sys.version_info >= (3, 1) :
-                    fp.write(base64.decodebytes(AES_PKG_DATA))
-                else :
-                    fp.write(base64.decodestring(AES_PKG_DATA))
+                fp.write(base64.decodebytes(AES_PKG_DATA))
+
             # Unpack the aes tarfile then delete it.
             with tarfile.open(aes_path) as t:
-                t.extractall(tmp_dir)
+                t.extractall(tmp_dir, filter='tar')
             os.unlink(aes_path)
 
             # import aes module and decrypt pkg tar file
@@ -206,7 +193,7 @@ def main():
 
         # Unpack the tarfile.
         with tarfile.open(tar_path) as t:
-            t.extractall(tmp_dir)
+            t.extractall(tmp_dir, filter='tar')
         os.unlink(tar_path)
 
         pkg_path = os.path.join(tmp_dir, pkg_name)
@@ -306,6 +293,9 @@ def make_package(content_dir, file_name, setup_script, script_args=(),
     # Create a temporary directory to do work in.
     tmp_dir = tempfile.mkdtemp('_pymakeself')
     pkg_path = os.path.join(tmp_dir, os.path.basename(file_name))
+    if label:
+        label = label.replace("'", "\\'")
+
     try:
         _copy_package_files(pkg_path, content_dir, setup_script, in_content,
                             tools, password)
@@ -436,7 +426,7 @@ def _pkg_to_exe(tar_path, file_name, setup_script, script_args, in_content,
     print('===> writing executable:', os.path.relpath(exe_path))
     with open(exe_path, 'wb') as exe_f:
         # Write interpreter invocation line.
-        exe_f.write(b'#!/usr/bin/env python\n')
+        exe_f.write(b'#!/usr/bin/env python3\n')
         # Write comment into executable script.
         exe_f.write(b'#\n# Extracts archive and runs setup script.\n#\n')
 
@@ -542,11 +532,9 @@ def main(prg=None):
     ap.add_argument('--tools', '-t', action='store_true',
                     help='Include installtools module.')
     ap.add_argument('--version', action='version', version=__version__)
-    if 'lzma' in dir():
-        ap.add_argument(
-            '--xz', action='store_const', const='xz', dest='compress',
-            help='Compress using xz instead of gzip. This requires Python3.x '
-            'for both creation and extraction.')
+    ap.add_argument(
+        '--xz', action='store_const', const='xz', dest='compress',
+        help='Compress using xz instead of gzip.')
     ap.add_argument('content', help='Directory containing files to '
                     'archive in installer.')
     ap.add_argument('installer_name',
@@ -608,6 +596,7 @@ def main(prg=None):
         print('setup_script:', 'None')
 
     print()
+
     try:
         exe_path = make_package(
             args.content, args.installer_name, args.setup_script,

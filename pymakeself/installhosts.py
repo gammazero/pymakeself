@@ -2,15 +2,9 @@
 Install an account into all the hosts specified in installhosts.conf.
 
 """
-from __future__ import print_function
-
 import os
 import sys
 import subprocess
-
-if sys.hexversion < 0x03000000:
-    input = raw_input
-
 
 def _confirm(prompt, default=None):
     if default is not None:
