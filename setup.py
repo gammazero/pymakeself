@@ -24,7 +24,7 @@ def main():
         license='http://www.opensource.org/licenses/mit-license.php',
         platforms=['unix', 'linux', 'osx', 'cygwin', 'win32'],
         keywords='archive installation tar',
-        classifiers=['Development Status :: 4 - Beta',
+        classifiers=['Development Status :: 5 - Production/Stable',
                      'Intended Audience :: Developers',
                      'License :: OSI Approved :: MIT License',
                      'Operating System :: POSIX',
@@ -33,7 +33,6 @@ def main():
                      'Topic :: Software Development :: Libraries',
                      'Topic :: Utilities',
                      'Programming Language :: Python',
-                     'Programming Language :: Python :: 2.7',
                      'Programming Language :: Python :: 3'],
         packages=['pymakeself', 'pymakeself.installtools', 'pymakeself.aes'],
         entry_points={
