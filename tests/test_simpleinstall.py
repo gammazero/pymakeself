@@ -1,7 +1,6 @@
 #
 # Run with py.test
 #
-from __future__ import print_function
 import os
 import subprocess
 import tempfile
@@ -59,7 +58,7 @@ class TestSimpleInstall(object):
 
     def test_check_installer(self):
         """Test SHA256 check."""
-        subprocess.check_call(('python', self.installer_name, '--check'))
+        subprocess.check_call(('python3', self.installer_name, '--check'))
 
     def test_list_installer(self):
         """Test files list."""
@@ -67,7 +66,7 @@ class TestSimpleInstall(object):
         kwargs = {}
         if sys.version_info.major >= 3:
             kwargs = {"text": True}
-        o = subprocess.check_output(('python', self.installer_name, '--list'),
+        o = subprocess.check_output(('python3', self.installer_name, '--list'),
                                     **kwargs)
         for line in o.split('\n'):
             if line and line[0] == '-':
@@ -81,7 +80,7 @@ class TestSimpleInstall(object):
     def test_run_installer(self):
         """Test running installer."""
         # Run the installer.
-        subprocess.check_call(('python', self.installer_name,
+        subprocess.check_call(('python3', self.installer_name,
                                "hello", "world", "--xyz"))
         print('Ran', self.installer_name)
 

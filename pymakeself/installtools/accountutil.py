@@ -19,7 +19,6 @@ sudoers file to allow the account to execute all commands as superuser.  On
 FreeBSD systems, admin accounts are also added to the wheel group.
 
 """
-from __future__ import print_function
 import os
 import sys
 import stat
