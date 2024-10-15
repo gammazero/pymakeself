@@ -236,7 +236,7 @@ def main():
                 # it was not located in archive dir.
                 os.chdir(arch_path)
 
-            exec(code, {'__name__': '__main__', '__file__': script_name})
+            exec(code, {'__name__': '__main__', '__file__': script_name, '__orig_dir__' : orig_dir})
             # *** DO NO EXPECT EXECUTION PAST THIS POINT ***
             # setup script may call sys.exit()
     except RuntimeError as e:
