@@ -94,12 +94,8 @@ def main():
     if len(sys.argv) >= 3:
         passwd = sys.argv[2]
 
-    if sys.hexversion < 0x03000000:
-        in_file = sys.stdin
-        out_file = sys.stdout
-    else:
-        in_file = sys.stdin.buffer
-        out_file = sys.stdout.buffer
+    in_file = sys.stdin.buffer
+    out_file = sys.stdout.buffer
 
     err = None
     if op == "encrypt":
